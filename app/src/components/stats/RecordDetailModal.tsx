@@ -100,6 +100,9 @@ const MugshotImage: React.FC<{
       <img
         src={src}
         alt={alt}
+        // Prevents cdn.arrests.org / recentlybooked.com hotlink block
+        referrerPolicy="no-referrer"
+        loading="lazy"
         style={{
           width: '100%',
           height: '100%',

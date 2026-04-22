@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { RecordSearchResult } from '../../lib/types/viewModels';
 
 // =============================================================================
@@ -12,9 +12,12 @@ interface RecordRowProps {
 }
 
 /**
- * Placeholder for missing mugshots
+ * Placeholder shown when a mugshot URL is missing OR the image failed to load.
+ * cdn.arrests.org currently returns a Cloudflare 403 challenge to every browser
+ * request (CORP: same-origin) so most thumbnails render this placeholder until
+ * the scraper rehosts images to Supabase Storage.
  */
-const ImagePlaceholder: React.FC = () => (
+const BlockedImagePlaceholder: React.FC = () => (
   <div
     style={{
       width: '48px',
@@ -27,8 +30,9 @@ const ImagePlaceholder: React.FC = () => (
       fontSize: '0.7rem',
       fontWeight: 500,
     }}
+    aria-label="Image unavailable"
   >
-    N/A
+    🔒
   </div>
 );
 
@@ -37,6 +41,12 @@ export const RecordRow: React.FC<RecordRowProps> = ({
   onClick,
   showImage = true,
 }) => {
+  // Track image state: loaded vs blocked. Row is not hidden — we always render
+  // the record but swap in a placeholder when the mugshot can't load.
+  const [imageStatus, setImageStatus] = useState<'loading' | 'loaded' | 'failed'>(
+    record.imageUrl ? 'loading' : 'failed'
+  );
+
   return (
     <div
       onClick={onClick}
@@ -66,25 +76,28 @@ export const RecordRow: React.FC<RecordRowProps> = ({
             overflow: 'hidden',
           }}
         >
-          {record.imageUrl ? (
+          {record.imageUrl && imageStatus !== 'failed' ? (
             <img
               src={record.imageUrl}
               alt={`${record.personName} mugshot`}
+              referrerPolicy="no-referrer"
+              loading="lazy"
               style={{
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
+                display: imageStatus === 'loaded' ? 'block' : 'none',
               }}
-              onError={(e) => {
-                // Replace with placeholder on error
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.parentElement?.appendChild(
-                  document.createElement('div')
-                );
-              }}
+              onLoad={() => setImageStatus('loaded')}
+              onError={() => setImageStatus('failed')}
             />
           ) : (
-            <ImagePlaceholder />
+            <BlockedImagePlaceholder />
+          )}
+          {/* Render a placeholder underneath the hidden img during loading so
+              the row never shows a broken-image icon. */}
+          {record.imageUrl && imageStatus === 'loading' && (
+            <BlockedImagePlaceholder />
           )}
         </div>
       )}
