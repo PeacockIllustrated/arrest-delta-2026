@@ -35,6 +35,15 @@ export function isDemoMode(): boolean {
     return getPortalMode() === 'demo';
 }
 
+/**
+ * Live-demo bypass: in live mode but with VITE_ALLOW_LIVE_DEMO=true, the auth
+ * wall is waived so the portal can be walked through without signing in.
+ * Real Supabase reads still happen — only the guard is bypassed.
+ */
+export function isLiveDemoBypass(): boolean {
+    return getPortalMode() === 'live' && import.meta.env.VITE_ALLOW_LIVE_DEMO === 'true';
+}
+
 // =============================================================================
 // VIEW-MODELS - UI-facing data structures (adapter output)
 // These are consumed by UI components, never raw payload JSON.

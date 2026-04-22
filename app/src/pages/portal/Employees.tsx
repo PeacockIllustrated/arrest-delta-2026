@@ -32,11 +32,14 @@ export interface Employee {
 // =============================================================================
 
 const mockEmployees: Employee[] = [
-    { id: 'emp-001', name: 'John Michael Smith', role: 'Driver', department: 'Logistics', location: 'Miami, FL', status: 'active', risk_level: 'high', last_check: '2026-01-01T19:20:00Z', active_alerts: 3, active_incidents: 1, created_at: '2025-06-15T10:00:00Z', updated_at: '2026-01-01T19:20:00Z' },
-    { id: 'emp-002', name: 'Jane Anne Doe', role: 'Driver', department: 'Logistics', location: 'Orlando, FL', status: 'active', risk_level: 'medium', last_check: '2026-01-01T19:05:00Z', active_alerts: 2, active_incidents: 0, created_at: '2025-07-20T14:00:00Z', updated_at: '2026-01-01T19:05:00Z' },
-    { id: 'emp-003', name: 'Robert James Wilson', role: 'Warehouse Associate', department: 'Operations', location: 'Tampa, FL', status: 'active', risk_level: 'low', last_check: '2026-01-01T17:30:00Z', active_alerts: 0, active_incidents: 0, created_at: '2025-04-10T09:00:00Z', updated_at: '2026-01-01T17:30:00Z' },
-    { id: 'emp-004', name: 'Maria Garcia', role: 'Driver', department: 'Logistics', location: 'Jacksonville, FL', status: 'suspended', risk_level: 'critical', last_check: '2025-12-30T14:00:00Z', active_alerts: 5, active_incidents: 2, created_at: '2025-03-01T11:00:00Z', updated_at: '2025-12-30T14:00:00Z' },
-    { id: 'emp-005', name: 'David Chen', role: 'Manager', department: 'Operations', location: 'Miami, FL', status: 'active', risk_level: 'low', last_check: '2026-01-02T08:00:00Z', active_alerts: 0, active_incidents: 0, created_at: '2024-11-15T10:00:00Z', updated_at: '2026-01-02T08:00:00Z' },
+    { id: 'emp-001', name: 'John Michael Smith', role: 'Driver', department: 'Logistics', location: 'Los Angeles, CA', status: 'active', risk_level: 'high', last_check: '2026-01-01T19:20:00Z', active_alerts: 3, active_incidents: 1, created_at: '2025-06-15T10:00:00Z', updated_at: '2026-01-01T19:20:00Z' },
+    { id: 'emp-002', name: 'Jane Anne Doe', role: 'Driver', department: 'Logistics', location: 'Houston, TX', status: 'active', risk_level: 'medium', last_check: '2026-01-01T19:05:00Z', active_alerts: 2, active_incidents: 0, created_at: '2025-07-20T14:00:00Z', updated_at: '2026-01-01T19:05:00Z' },
+    { id: 'emp-003', name: 'Robert James Wilson', role: 'Warehouse Associate', department: 'Operations', location: 'Chicago, IL', status: 'active', risk_level: 'low', last_check: '2026-01-01T17:30:00Z', active_alerts: 0, active_incidents: 0, created_at: '2025-04-10T09:00:00Z', updated_at: '2026-01-01T17:30:00Z' },
+    { id: 'emp-004', name: 'Maria Garcia', role: 'Driver', department: 'Logistics', location: 'Phoenix, AZ', status: 'suspended', risk_level: 'critical', last_check: '2025-12-30T14:00:00Z', active_alerts: 5, active_incidents: 2, created_at: '2025-03-01T11:00:00Z', updated_at: '2025-12-30T14:00:00Z' },
+    { id: 'emp-005', name: 'David Chen', role: 'Manager', department: 'Operations', location: 'Seattle, WA', status: 'active', risk_level: 'low', last_check: '2026-01-02T08:00:00Z', active_alerts: 0, active_incidents: 0, created_at: '2024-11-15T10:00:00Z', updated_at: '2026-01-02T08:00:00Z' },
+    { id: 'emp-006', name: 'Ashley Thompson', role: 'Driver', department: 'Logistics', location: 'Atlanta, GA', status: 'active', risk_level: 'medium', last_check: '2026-01-02T09:15:00Z', active_alerts: 1, active_incidents: 0, created_at: '2025-08-12T10:00:00Z', updated_at: '2026-01-02T09:15:00Z' },
+    { id: 'emp-007', name: 'Marcus Lee', role: 'Dispatcher', department: 'Operations', location: 'New York, NY', status: 'active', risk_level: 'low', last_check: '2026-01-02T07:45:00Z', active_alerts: 0, active_incidents: 0, created_at: '2025-05-03T10:00:00Z', updated_at: '2026-01-02T07:45:00Z' },
+    { id: 'emp-008', name: 'Sarah Thompson', role: 'Driver', department: 'Logistics', location: 'Miami, FL', status: 'active', risk_level: 'medium', last_check: '2026-01-02T08:50:00Z', active_alerts: 2, active_incidents: 0, created_at: '2025-09-01T10:00:00Z', updated_at: '2026-01-02T08:50:00Z' },
 ];
 
 // =============================================================================
@@ -233,19 +236,6 @@ const Employees: React.FC = () => {
                     )}
                 </CardBody>
             </Card>
-
-            {/* TODO placeholder */}
-            <div style={{ marginTop: '24px', padding: '16px', background: 'var(--info-muted)', borderRadius: '0px', border: '1px solid var(--info)' }}>
-                <p style={{
-                    margin: 0,
-                    fontSize: '0.75rem',
-                    fontFamily: 'var(--font-body, inherit)',
-                    textTransform: 'uppercase',
-                    color: 'var(--info)'
-                }}>
-                    <strong>TODO:</strong> Connect to Supabase `employees` table with real-time subscription for status updates
-                </p>
-            </div>
         </div>
     );
 };

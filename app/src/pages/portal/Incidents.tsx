@@ -1,20 +1,21 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader, Card, CardBody, Badge, Button, Input, EmptyState } from '../../components/ui';
 import { LocationIcon, ListIcon, PersonIcon } from '../../components/portal/Icons';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { usePortalData, type AlertCardModel } from '../../hooks/usePortalData';
 
 // =============================================================================
-// TYPES - Ready for Supabase integration
+// TYPES — exported so IncidentDetail.tsx can reuse them
 // =============================================================================
 
 export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
 export type IncidentStatus = 'open' | 'acknowledged' | 'investigating' | 'resolved' | 'closed';
 export type IncidentType = 'arrest' | 'booking' | 'traffic_violation' | 'warrant' | 'background_flag' | 'other';
+type ViewMode = 'list' | 'map' | 'timeline';
 
-export interface Incident {
+interface Incident {
     id: string;
-    employee_id: string;
     employee_name: string;
     type: IncidentType;
     severity: IncidentSeverity;
@@ -22,24 +23,57 @@ export interface Incident {
     title: string;
     description: string;
     location: string;
-    coordinates?: { lat: number; lng: number };
     created_at: string;
-    updated_at: string;
 }
 
 // =============================================================================
-// MOCK DATA - Replace with Supabase query
-// TODO: Connect to Supabase table `incidents`
+// ADAPTER - Map simulator alerts into incident view-models
 // =============================================================================
 
-const mockIncidents: Incident[] = [];
+function severityFromScore(score: number): IncidentSeverity {
+    if (score >= 85) return 'critical';
+    if (score >= 70) return 'high';
+    if (score >= 50) return 'medium';
+    return 'low';
+}
+
+function statusFromAlert(status: AlertCardModel['status']): IncidentStatus {
+    if (status === 'new') return 'open';
+    if (status === 'reviewed') return 'investigating';
+    return 'acknowledged';
+}
+
+function typeFromCharge(topCharge: string | null): IncidentType {
+    const c = (topCharge ?? '').toLowerCase();
+    if (c.includes('dui') || c.includes('reckless') || c.includes('traffic')) return 'traffic_violation';
+    if (c.includes('warrant')) return 'warrant';
+    if (c.includes('assault') || c.includes('battery') || c.includes('theft')) return 'arrest';
+    if (c.includes('possession')) return 'background_flag';
+    return 'booking';
+}
+
+function alertToIncident(alert: AlertCardModel): Incident {
+    const type = typeFromCharge(alert.topCharge);
+    const severity = severityFromScore(alert.severityScore);
+    return {
+        id: alert.escalationKey,
+        employee_name: alert.subject.subjectName,
+        type,
+        severity,
+        status: statusFromAlert(alert.status),
+        title: alert.topCharge ?? 'Incident pending classification',
+        description: `${alert.chargeCount} charge${alert.chargeCount === 1 ? '' : 's'} logged at ${alert.jurisdictionLabel}. Confidence ${alert.confidenceScore}%.`,
+        location: alert.jurisdictionLabel,
+        created_at: alert.createdAt,
+    };
+}
 
 // =============================================================================
-// CONFIGURATION
+// CONFIG
 // =============================================================================
 
-type ViewMode = 'list' | 'map' | 'timeline';
-
+// Copy note: the live incident feed is fully nationwide — it reads jurisdiction
+// from the simulator's DEMO_JURISDICTIONS list, which spans 14 states.
 const severityConfig: Record<IncidentSeverity, { badge: 'danger' | 'warning' | 'info' | 'default'; color: string }> = {
     critical: { badge: 'danger', color: 'var(--danger)' },
     high: { badge: 'warning', color: 'var(--warning)' },
@@ -71,7 +105,32 @@ const typeLabels: Record<IncidentType, string> = {
 const Incidents: React.FC = () => {
     usePageTitle('Incidents');
     const navigate = useNavigate();
+    const portal = usePortalData();
     const [viewMode, setViewMode] = useState<ViewMode>('list');
+    const [query, setQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<IncidentStatus | 'all'>('all');
+    const [severityFilter, setSeverityFilter] = useState<IncidentSeverity | 'all'>('all');
+
+    const incidents = useMemo(() => portal.alerts.map(alertToIncident), [portal.alerts]);
+
+    const filtered = useMemo(() => {
+        return incidents.filter((inc) => {
+            if (statusFilter !== 'all' && inc.status !== statusFilter) return false;
+            if (severityFilter !== 'all' && inc.severity !== severityFilter) return false;
+            if (query) {
+                const q = query.toLowerCase();
+                const hay = [inc.employee_name, inc.title, inc.location].join(' ').toLowerCase();
+                if (!hay.includes(q)) return false;
+            }
+            return true;
+        });
+    }, [incidents, statusFilter, severityFilter, query]);
+
+    const locationTallies = useMemo(() => {
+        const map = new Map<string, number>();
+        filtered.forEach((i) => map.set(i.location, (map.get(i.location) ?? 0) + 1));
+        return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+    }, [filtered]);
 
     return (
         <div>
@@ -80,10 +139,11 @@ const Incidents: React.FC = () => {
                 description="Track and manage arrest and compliance incidents across your workforce"
                 actions={
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        <Button variant="secondary">Export</Button>
-                        <Button variant="primary" leftIcon={<span>+</span>}>
-                            Report Incident
-                        </Button>
+                        <Badge variant={portal.isOn ? 'success' : 'default'} size="sm">
+                            {portal.isOn ? 'Live' : 'Idle'} • {incidents.length} in feed
+                        </Badge>
+                        <Button variant="secondary" size="sm">Export</Button>
+                        <Button variant="primary" size="sm" leftIcon={<span>+</span>}>Report Incident</Button>
                     </div>
                 }
             />
@@ -92,7 +152,6 @@ const Incidents: React.FC = () => {
             <Card style={{ marginBottom: '24px' }}>
                 <CardBody>
                     <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-                        {/* View Mode Toggle */}
                         <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-elevated)', padding: '4px', borderRadius: '6px' }}>
                             {(['list', 'map', 'timeline'] as ViewMode[]).map((mode) => (
                                 <button
@@ -117,26 +176,17 @@ const Incidents: React.FC = () => {
                             ))}
                         </div>
 
-                        {/* Search & Filters */}
                         <div style={{ display: 'flex', gap: '12px', flex: 1, maxWidth: '600px' }}>
                             <Input
                                 placeholder="Search incidents..."
-                                leftIcon={
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
-                                    </svg>
-                                }
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
                                 fullWidth
                             />
                             <select
-                                style={{
-                                    padding: '8px 12px',
-                                    background: 'var(--input-bg)',
-                                    border: '1px solid var(--input-border)',
-                                    borderRadius: '6px',
-                                    color: 'var(--text-primary)',
-                                    fontSize: '0.875rem',
-                                }}
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value as IncidentStatus | 'all')}
+                                style={{ padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.875rem' }}
                             >
                                 <option value="all">All Statuses</option>
                                 <option value="open">Open</option>
@@ -146,14 +196,9 @@ const Incidents: React.FC = () => {
                                 <option value="closed">Closed</option>
                             </select>
                             <select
-                                style={{
-                                    padding: '8px 12px',
-                                    background: 'var(--input-bg)',
-                                    border: '1px solid var(--input-border)',
-                                    borderRadius: '6px',
-                                    color: 'var(--text-primary)',
-                                    fontSize: '0.875rem',
-                                }}
+                                value={severityFilter}
+                                onChange={(e) => setSeverityFilter(e.target.value as IncidentSeverity | 'all')}
+                                style={{ padding: '8px 12px', background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: '6px', color: 'var(--text-primary)', fontSize: '0.875rem' }}
                             >
                                 <option value="all">All Severities</option>
                                 <option value="critical">Critical</option>
@@ -166,19 +211,19 @@ const Incidents: React.FC = () => {
                 </CardBody>
             </Card>
 
-            {/* Content based on view mode */}
+            {/* List view */}
             {viewMode === 'list' && (
                 <Card>
                     <CardBody cardPadding="0">
-                        {mockIncidents.length === 0 ? (
+                        {filtered.length === 0 ? (
                             <EmptyState
                                 icon={<ListIcon size={32} />}
-                                title="No incidents found"
-                                description="No incidents match your current filters."
+                                title={portal.isOn ? 'Warming up…' : 'No incidents'}
+                                description={portal.isOn ? 'Live feed is seeding — incidents will appear shortly.' : 'No incidents match the current filters.'}
                             />
                         ) : (
                             <div>
-                                {mockIncidents.map((incident, index) => (
+                                {filtered.map((incident, index) => (
                                     <div
                                         key={incident.id}
                                         onClick={() => navigate(`/portal/incidents/${incident.id}`)}
@@ -187,41 +232,24 @@ const Incidents: React.FC = () => {
                                             alignItems: 'flex-start',
                                             gap: '16px',
                                             padding: '16px 20px',
-                                            borderBottom: index < mockIncidents.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                                            borderBottom: index < filtered.length - 1 ? '1px solid var(--border-subtle)' : 'none',
                                             cursor: 'pointer',
                                             transition: 'background 0.1s ease',
                                         }}
                                         onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--sidebar-item-hover)')}
                                         onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                                     >
-                                        {/* Severity indicator */}
-                                        <div
-                                            style={{
-                                                width: '4px',
-                                                height: '60px',
-                                                borderRadius: '2px',
-                                                background: severityConfig[incident.severity].color,
-                                                flexShrink: 0,
-                                            }}
-                                        />
-
-                                        {/* Content */}
+                                        <div style={{ width: '4px', height: '60px', borderRadius: '2px', background: severityConfig[incident.severity].color, flexShrink: 0 }} />
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                                                    {incident.title}
-                                                </span>
-                                                <Badge size="sm" variant={severityConfig[incident.severity].badge}>
-                                                    {incident.severity}
-                                                </Badge>
-                                                <Badge size="sm" variant={statusConfig[incident.status].badge}>
-                                                    {statusConfig[incident.status].label}
-                                                </Badge>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                                                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{incident.title}</span>
+                                                <Badge size="sm" variant={severityConfig[incident.severity].badge}>{incident.severity}</Badge>
+                                                <Badge size="sm" variant={statusConfig[incident.status].badge}>{statusConfig[incident.status].label}</Badge>
                                             </div>
                                             <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                                                 {incident.description}
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.75rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
                                                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                     <PersonIcon size={12} /> {incident.employee_name}
                                                 </span>
@@ -232,8 +260,6 @@ const Incidents: React.FC = () => {
                                                 <span>{new Date(incident.created_at).toLocaleString('en-GB')}</span>
                                             </div>
                                         </div>
-
-                                        {/* Actions */}
                                         <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                                             <Button size="sm" variant="ghost">View</Button>
                                         </div>
@@ -245,94 +271,87 @@ const Incidents: React.FC = () => {
                 </Card>
             )}
 
+            {/* Map view - lightweight heatmap by jurisdiction */}
             {viewMode === 'map' && (
                 <Card>
                     <CardBody>
-                        <div style={{
-                            height: '400px',
-                            background: 'var(--bg-elevated)',
-                            borderRadius: '8px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: '1px dashed var(--border-default)',
-                        }}>
-                            <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
-                                <span style={{ color: 'var(--accent)' }}><LocationIcon size={48} /></span>
-                                <p style={{ marginTop: '16px' }}>Map View</p>
-                                <p style={{ fontSize: '0.875rem' }}>Incident locations will be displayed here</p>
-                                <p style={{ fontSize: '0.75rem', marginTop: '8px' }}>TODO: Integrate with DeepMapViz component</p>
+                        <div style={{ padding: '12px 0' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px' }}>
+                                Incidents by jurisdiction · last {incidents.length} events
                             </div>
+                            {locationTallies.length === 0 ? (
+                                <EmptyState title="No geographic data yet" description="Waiting for incoming incidents." />
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {locationTallies.map(([location, count]) => {
+                                        const max = locationTallies[0][1];
+                                        const pct = Math.max(10, Math.round((count / max) * 100));
+                                        return (
+                                            <div key={location} style={{ display: 'grid', gridTemplateColumns: '220px 1fr 40px', gap: '12px', alignItems: 'center' }}>
+                                                <div style={{ fontSize: '0.875rem', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{location}</div>
+                                                <div style={{ height: '10px', background: 'var(--bg-elevated)', borderRadius: '4px', overflow: 'hidden' }}>
+                                                    <div style={{ width: `${pct}%`, height: '100%', background: 'var(--accent)', transition: 'width 0.4s ease' }} />
+                                                </div>
+                                                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{count}</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </CardBody>
                 </Card>
             )}
 
+            {/* Timeline view */}
             {viewMode === 'timeline' && (
                 <Card>
                     <CardBody>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
-                            {mockIncidents.map((incident, index) => (
-                                <div key={incident.id} style={{ display: 'flex', gap: '16px' }}>
-                                    {/* Timeline line */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '20px' }}>
-                                        <div style={{
-                                            width: '12px',
-                                            height: '12px',
-                                            borderRadius: '50%',
-                                            background: severityConfig[incident.severity].color,
-                                            border: '2px solid var(--bg-base)',
-                                            zIndex: 1,
-                                        }} />
-                                        {index < mockIncidents.length - 1 && (
+                        {filtered.length === 0 ? (
+                            <EmptyState title={portal.isOn ? 'Warming up…' : 'No incidents'} description="Waiting for live events." />
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+                                {filtered.slice(0, 20).map((incident, index) => (
+                                    <div key={incident.id} style={{ display: 'flex', gap: '16px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '20px' }}>
                                             <div style={{
-                                                width: '2px',
-                                                flex: 1,
-                                                background: 'var(--border-default)',
-                                                minHeight: '40px',
+                                                width: '12px',
+                                                height: '12px',
+                                                borderRadius: '50%',
+                                                background: severityConfig[incident.severity].color,
+                                                border: '2px solid var(--bg-base)',
+                                                zIndex: 1,
                                             }} />
-                                        )}
-                                    </div>
-
-                                    {/* Content */}
-                                    <div
-                                        style={{
-                                            flex: 1,
-                                            padding: '12px 16px',
-                                            marginBottom: '16px',
-                                            background: 'var(--bg-elevated)',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                        }}
-                                        onClick={() => navigate(`/portal/incidents/${incident.id}`)}
-                                    >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                            <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{incident.title}</span>
-                                            <Badge size="sm" variant={statusConfig[incident.status].badge}>{statusConfig[incident.status].label}</Badge>
+                                            {index < filtered.length - 1 && (
+                                                <div style={{ width: '2px', flex: 1, background: 'var(--border-default)', minHeight: '40px' }} />
+                                            )}
                                         </div>
-                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                            {incident.employee_name} • {new Date(incident.created_at).toLocaleString('en-GB')}
+                                        <div
+                                            style={{
+                                                flex: 1,
+                                                padding: '12px 16px',
+                                                marginBottom: '16px',
+                                                background: 'var(--bg-elevated)',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                            }}
+                                            onClick={() => navigate(`/portal/incidents/${incident.id}`)}
+                                        >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                                                <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{incident.title}</span>
+                                                <Badge size="sm" variant={statusConfig[incident.status].badge}>{statusConfig[incident.status].label}</Badge>
+                                            </div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                                {incident.employee_name} • {incident.location} • {new Date(incident.created_at).toLocaleString('en-GB')}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </CardBody>
                 </Card>
             )}
-
-            {/* TODO placeholder */}
-            <div style={{ marginTop: '24px', padding: '16px', background: 'var(--info-muted)', borderRadius: '0px', border: '1px solid var(--info)' }}>
-                <p style={{
-                    margin: 0,
-                    fontSize: '0.75rem',
-                    fontFamily: 'var(--font-body, inherit)',
-                    textTransform: 'uppercase',
-                    color: 'var(--info)'
-                }}>
-                    <strong>TODO:</strong> Connect to Supabase `incidents` table with real-time subscription and integrate map view with DeepMapViz
-                </p>
-            </div>
         </div>
     );
 };

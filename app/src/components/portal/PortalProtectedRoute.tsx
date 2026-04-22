@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useRole } from '../../hooks/useRole';
+import { isDemoMode, isLiveDemoBypass } from '../../hooks/usePortalData';
 import type { UserRole } from './AuthProvider';
 
 interface PortalProtectedRouteProps {
@@ -13,6 +14,12 @@ export const PortalProtectedRoute: React.FC<PortalProtectedRouteProps> = ({
     children,
     requiredRole
 }) => {
+    // Demo mode: portal fully unlocked (no Supabase at all).
+    // Live-demo bypass: live Supabase reads, but auth waived for walkthroughs.
+    if (isDemoMode() || isLiveDemoBypass()) {
+        return <>{children}</>;
+    }
+
     const { user, profile, loading } = useAuth();
     const { hasRole } = useRole();
     const location = useLocation();

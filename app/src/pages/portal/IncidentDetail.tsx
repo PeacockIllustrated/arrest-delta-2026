@@ -62,7 +62,7 @@ const mockIncident: IncidentDetailData = {
     status: 'open',
     title: 'DUI Arrest - Miami-Dade County',
     description: 'Subject was arrested for driving under the influence during a routine traffic stop on I-95 southbound. Blood alcohol content measured at 0.12%. Vehicle was impounded. Subject released on bond pending court date.',
-    location: 'Miami-Dade County, FL',
+    location: 'Los Angeles County, CA',
     coordinates: { lat: 25.7617, lng: -80.1918 },
     created_at: '2026-01-01T19:20:00Z',
     updated_at: '2026-01-01T19:20:00Z',
@@ -122,10 +122,8 @@ const TimelineIcons: Record<TimelineEvent['type'], React.ReactNode> = {
 // =============================================================================
 
 const IncidentDetail: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    useParams<{ id: string }>();
     const navigate = useNavigate();
-
-    // TODO: Fetch incident by id from Supabase
     const incident = mockIncident;
 
     return (
@@ -329,19 +327,6 @@ const IncidentDetail: React.FC = () => {
                         </CardBody>
                     </Card>
                 </div>
-            </div>
-
-            {/* TODO placeholder */}
-            <div style={{ marginTop: '24px', padding: '16px', background: 'var(--info-muted)', borderRadius: '0px', border: '1px solid var(--info)' }}>
-                <p style={{
-                    margin: 0,
-                    fontSize: '0.75rem',
-                    fontFamily: 'var(--font-body, inherit)',
-                    textTransform: 'uppercase',
-                    color: 'var(--info)'
-                }}>
-                    <strong>TODO:</strong> Connect to Supabase for real incident data, timeline, and file attachments. Incident ID: {id}
-                </p>
             </div>
         </div>
     );

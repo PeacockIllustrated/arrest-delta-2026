@@ -91,13 +91,6 @@ const Search: React.FC = () => {
                     )}
                 </CardBody>
             </Card>
-
-            {/* TODO placeholder */}
-            <div style={{ marginTop: '24px', padding: '16px', background: 'var(--info-muted)', borderRadius: '8px', border: '1px solid var(--info)' }}>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--info)' }}>
-                    <strong>TODO:</strong> Connect to entity search API with fuzzy matching and result ranking
-                </p>
-            </div>
         </div>
     );
 };

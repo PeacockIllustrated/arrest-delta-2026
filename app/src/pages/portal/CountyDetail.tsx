@@ -231,7 +231,7 @@ const CountyDetail: React.FC = () => {
 
         <PageHeader
           title={`${county.name} County`}
-          description={`${county.region || 'Florida'} • Population: ${county.population?.toLocaleString() ?? 'N/A'} • FIPS: ${county.fips}`}
+          description={`${county.region || 'United States'} • Population: ${county.population?.toLocaleString() ?? 'N/A'} • FIPS: ${county.fips}`}
         />
       </div>
 

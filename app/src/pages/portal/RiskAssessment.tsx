@@ -217,19 +217,6 @@ const RiskAssessment: React.FC = () => {
                     </div>
                 </div>
             ))}
-
-            {/* TODO placeholder */}
-            <div style={{ marginTop: '24px', padding: '16px', background: 'var(--info-muted)', borderRadius: '0px', border: '1px solid var(--info)' }}>
-                <p style={{
-                    margin: 0,
-                    fontSize: '0.75rem',
-                    fontFamily: 'var(--font-body, inherit)',
-                    textTransform: 'uppercase',
-                    color: 'var(--info)'
-                }}>
-                    <strong>TODO:</strong> Connect to Supabase `risk_factors` table with real-time updates and weight editing modal
-                </p>
-            </div>
         </div>
     );
 };

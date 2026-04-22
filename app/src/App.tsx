@@ -43,6 +43,7 @@ const ComponentsPage = lazy(() => import('./pages/ComponentsPage'));
 
 // Print Pages
 const InvestorOnePagerA4 = lazy(() => import('./pages/print/InvestorOnePagerA4.tsx'));
+const CoverPageA4 = lazy(() => import('./pages/print/CoverPageA4.tsx'));
 
 
 // Deck Page Wrapper for tracking read status
@@ -166,6 +167,7 @@ function App() {
 
             {/* Public Pages (no Layout wrapper) */}
             <Route path="/print/investor-one-pager-a4" element={<InvestorOnePagerA4 />} />
+            <Route path="/print/cover" element={<CoverPageA4 />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/terms" element={<Terms />} />
 

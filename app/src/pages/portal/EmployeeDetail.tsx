@@ -53,7 +53,7 @@ const mockEmployee: EmployeeDetailData = {
     name: 'John Michael Smith',
     role: 'Driver',
     department: 'Logistics',
-    location: 'Miami, FL',
+    location: 'Los Angeles, CA',
     status: 'active',
     risk_level: 'high',
     email: 'john.smith@company.com',
@@ -354,19 +354,6 @@ const EmployeeDetail: React.FC = () => {
                     description={`The ${activeTab} feature is currently in development. Employee ID: ${id}`}
                 />
             )}
-
-            {/* TODO placeholder */}
-            <div style={{ marginTop: '24px', padding: '16px', background: 'var(--info-muted)', borderRadius: '0px', border: '1px solid var(--info)' }}>
-                <p style={{
-                    margin: 0,
-                    fontSize: '0.75rem',
-                    fontFamily: 'var(--font-body, inherit)',
-                    textTransform: 'uppercase',
-                    color: 'var(--info)'
-                }}>
-                    <strong>TODO:</strong> Connect to Supabase for real employee data, incidents, and alerts with real-time updates
-                </p>
-            </div>
         </div>
     );
 };

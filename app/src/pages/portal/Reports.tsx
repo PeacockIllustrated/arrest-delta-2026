@@ -25,7 +25,7 @@ const recentReports = [
     { name: 'Weekly Compliance Summary', date: '2026-01-01', type: 'Compliance Report' },
     { name: 'Q4 2025 Incident Analysis', date: '2025-12-31', type: 'Incident Summary' },
     { name: 'High-Risk Driver Profile: J. Smith', date: '2025-12-30', type: 'Employee Risk Profile' },
-    { name: 'Florida Regional Hotspots', date: '2025-12-28', type: 'Trends & Hotspots' },
+    { name: 'National Regional Hotspots', date: '2025-12-28', type: 'Trends & Hotspots' },
 ];
 
 // =============================================================================
@@ -170,19 +170,6 @@ const Reports: React.FC = () => {
                 title="Report Builder"
                 description="The visual report builder is in development. You'll be able to create custom reports with drag-and-drop sections, date range filters, and multiple export formats (PDF, CSV, XLSX)."
             />
-
-            {/* TODO placeholder */}
-            <div style={{ marginTop: '24px', padding: '16px', background: 'var(--info-muted)', borderRadius: '0px', border: '1px solid var(--info)' }}>
-                <p style={{
-                    margin: 0,
-                    fontSize: '0.75rem',
-                    fontFamily: 'var(--font-body, inherit)',
-                    textTransform: 'uppercase',
-                    color: 'var(--info)'
-                }}>
-                    <strong>TODO:</strong> Connect to Supabase `reports` table for saved reports and implement report generation
-                </p>
-            </div>
         </div>
     );
 };

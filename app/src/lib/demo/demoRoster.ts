@@ -24,16 +24,70 @@ const LAST_NAMES = [
     'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis', 'Robinson',
 ];
 
-// Distribution weights per county (higher = more roster entries)
+// Distribution weights per county (higher = more roster entries).
+// Weights roughly mirror real county population rank so the feed feels natural.
 const COUNTY_WEIGHTS: Record<string, number> = {
-    'c12086': 20, // Miami-Dade - largest
-    'c12011': 15, // Broward
-    'c12099': 12, // Palm Beach
-    'c12095': 12, // Orange
+    // California
+    'c06037': 25, // LA
+    'c06073': 12, // San Diego
+    'c06059': 12, // Orange (CA)
+    'c06075': 6,  // SF
+    'c06001': 10, // Alameda
+
+    // Texas
+    'c48201': 20, // Harris (Houston)
+    'c48113': 15, // Dallas
+    'c48029': 12, // Bexar (San Antonio)
+    'c48453': 9,  // Travis (Austin)
+    'c48439': 12, // Tarrant
+
+    // Florida
+    'c12086': 18, // Miami-Dade
+    'c12011': 12, // Broward
+    'c12095': 10, // Orange (FL)
     'c12057': 10, // Hillsborough
-    'c12031': 8,  // Duval
-    'c12103': 8,  // Pinellas
-    'c12071': 5,  // Lee
+
+    // New York
+    'c36047': 18, // Kings (Brooklyn)
+    'c36081': 15, // Queens
+    'c36061': 10, // Manhattan
+    'c36005': 8,  // Bronx
+
+    // Illinois
+    'c17031': 22, // Cook (Chicago)
+    'c17043': 6,  // DuPage
+
+    // Pennsylvania
+    'c42101': 12, // Philadelphia
+    'c42003': 8,  // Allegheny
+
+    // Ohio
+    'c39035': 8,  // Cuyahoga
+    'c39049': 10, // Franklin
+
+    // Georgia
+    'c13121': 8,  // Fulton
+    'c13135': 7,  // Gwinnett
+
+    // North Carolina
+    'c37119': 8,  // Mecklenburg
+    'c37183': 7,  // Wake
+
+    // Arizona
+    'c04013': 20, // Maricopa (Phoenix)
+    'c04019': 7,  // Pima (Tucson)
+
+    // Washington
+    'c53033': 15, // King (Seattle)
+
+    // Michigan
+    'c26163': 12, // Wayne (Detroit)
+
+    // Massachusetts
+    'c25025': 6,  // Suffolk (Boston)
+
+    // Colorado
+    'c08031': 6,  // Denver
 };
 
 /**

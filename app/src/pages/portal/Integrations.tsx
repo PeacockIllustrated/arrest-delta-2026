@@ -23,16 +23,24 @@ interface AvailableState {
 // Derive available states from demo jurisdictions
 const AVAILABLE_STATES: AvailableState[] = (() => {
     const stateMap: Record<string, AvailableState> = {};
+    const stateNames: Record<string, string> = {
+        CA: 'California',
+        TX: 'Texas',
+        FL: 'Florida',
+        NY: 'New_York',
+        IL: 'Illinois',
+        PA: 'Pennsylvania',
+        OH: 'Ohio',
+        GA: 'Georgia',
+        NC: 'North_Carolina',
+        AZ: 'Arizona',
+        WA: 'Washington',
+        MI: 'Michigan',
+        MA: 'Massachusetts',
+        CO: 'Colorado',
+    };
     DEMO_JURISDICTIONS.forEach((j) => {
         if (!stateMap[j.stateCode]) {
-            // Convert state code to full name for SVG ID
-            const stateNames: Record<string, string> = {
-                FL: 'Florida',
-                TX: 'Texas',
-                CA: 'California',
-                NY: 'New_York',
-                // Add more as needed
-            };
             stateMap[j.stateCode] = {
                 stateCode: j.stateCode,
                 stateName: stateNames[j.stateCode] || j.stateCode,
@@ -84,7 +92,7 @@ const SourceHealth: React.FC = () => {
     // Local state
     const [selectedCountyId, setSelectedCountyId] = useState<string | null>(null);
     const [healthFilter, setHealthFilter] = useState<HealthFilter>('all');
-    const [selectedState, setSelectedState] = useState<string>(AVAILABLE_STATES[0]?.stateCode || 'FL');
+    const [selectedState, setSelectedState] = useState<string>(AVAILABLE_STATES[0]?.stateCode || 'CA');
 
     // Get jurisdictions for selected state
     const stateJurisdictions = useMemo(() => {
@@ -451,7 +459,7 @@ const SourceHealth: React.FC = () => {
 
                         {/* State Map - 1:1 aspect ratio */}
                         <StateMapPreview
-                            stateId={selectedStateInfo?.stateName || 'Florida'}
+                            stateId={selectedStateInfo?.stateName || 'California'}
                             height="auto"
                             aspectRatio="1 / 1"
                         />

@@ -337,11 +337,11 @@ const RecordSearch: React.FC = () => {
 
   // Get display text for current selection
   const selectionLabel = useMemo(() => {
-    if (selectedCountyName) {
-      return `${selectedCountyName}, Florida`;
+    if (selectedCountyName && selectedState) {
+      return `${selectedCountyName}, ${selectedState}`;
     }
     if (selectedState) {
-      return 'Florida (All Counties)';
+      return `${selectedState} (All Counties)`;
     }
     return 'All Records';
   }, [selectedState, selectedCountyName]);
@@ -720,7 +720,7 @@ const RecordSearch: React.FC = () => {
                   ? 'No records match your search criteria'
                   : selectedState
                     ? 'Select a county on the map to view records'
-                    : 'Select Florida on the map to browse records'
+                    : 'Select a state on the map to browse records'
               }
             />
           )}

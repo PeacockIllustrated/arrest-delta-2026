@@ -23,7 +23,7 @@ const typeIcons: Record<string, string> = {
 };
 
 const WatchlistDetail: React.FC = () => {
-    const { id } = useParams<{ id: string }>();
+    useParams<{ id: string }>();
     const navigate = useNavigate();
 
     // In real app, fetch watchlist by id
@@ -146,13 +146,6 @@ const WatchlistDetail: React.FC = () => {
                     )}
                 </CardBody>
             </Card>
-
-            {/* TODO placeholder */}
-            <div style={{ marginTop: '24px', padding: '16px', background: 'var(--info-muted)', borderRadius: '8px', border: '1px solid var(--info)' }}>
-                <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--info)' }}>
-                    <strong>TODO:</strong> Implement CRUD operations for watchlist entities (using ID: {id})
-                </p>
-            </div>
         </div>
     );
 };

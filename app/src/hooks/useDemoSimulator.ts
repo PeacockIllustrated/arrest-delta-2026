@@ -514,6 +514,12 @@ export function useDemoSimulator(): UseDemoSimulatorReturn {
         if (isOn) return;
         setIsOn(true);
 
+        // Burst-seed 5 events immediately so the UI isn't empty on arrival.
+        // Spread them across 400ms so the feed renders with realistic staggering.
+        for (let i = 0; i < 5; i++) {
+            window.setTimeout(() => tick(), i * 80);
+        }
+
         // Event emission interval (3.5-6s randomised)
         const scheduleNext = () => {
             intervalRef.current = window.setTimeout(() => {

@@ -1,10 +1,54 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader, Card, CardHeader, CardBody, Badge, EmptyState } from '../../components/ui';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { useDemoSim } from '../../context/DemoSimContext';
+import { usePortalData, isDemoMode } from '../../hooks/usePortalData';
 import { JURISDICTION_MAP } from '../../lib/demo/demoJurisdictions';
 import type { AuditEntry, AuditActionType } from '../../lib/contracts/pipeline';
+import type { AuditLogEntryModel } from '../../hooks/usePortalData';
+
+// Map the action type enum to a human-readable label for the UI.
+const ACTION_LABELS: Record<string, string> = {
+    snapshot_captured: 'Snapshot captured',
+    record_parsed: 'Record parsed',
+    diff_computed: 'Diff computed',
+    confidence_scored: 'Confidence scored',
+    event_emitted: 'Event emitted',
+    viewed: 'Viewed',
+    reviewed: 'Reviewed',
+    escalated: 'Escalated',
+};
+
+// Adapter: Supabase `audit_log` rows (flat AuditLogEntryModel) → simulator AuditEntry shape.
+// We don't have integrity hashes in the live DB yet; display a truncated run_id/escalation_key
+// as a provenance marker so the UI still reads coherently.
+function liveToSimShape(entries: AuditLogEntryModel[]): AuditEntry[] {
+    return entries.map((e, i) => {
+        const actionType = (e.eventType || 'event_emitted') as AuditActionType;
+        const prev = i + 1 < entries.length ? entries[i + 1] : undefined;
+        return {
+            auditId: e.auditId,
+            atISO: e.createdAt,
+            actor: {
+                actorType: e.actor,
+                actorId: e.actor === 'human' ? 'operator' : 'system',
+                actorLabel: e.actor === 'human' ? 'Operator' : 'System',
+            },
+            action: {
+                actionType,
+                actionLabel: ACTION_LABELS[actionType] || actionType,
+            },
+            jurisdictionId: e.escalationKey || 'unknown',
+            eventId: e.escalationKey || undefined,
+            summary: e.detailsSummary || `Event: ${actionType}`,
+            integrity: {
+                chainPrevHash: prev ? prev.auditId.slice(0, 16) : undefined,
+                chainHash: e.auditId.slice(0, 16),
+            },
+        };
+    });
+}
 
 // =============================================================================
 // AUDIT TRAIL - Phase 4 "Black Box" Flight Recorder
@@ -56,20 +100,26 @@ const Audit: React.FC = () => {
     usePageTitle('Audit trail');
     const navigate = useNavigate();
     const sim = useDemoSim();
+    const portal = usePortalData();
 
     const [actorFilter, setActorFilter] = useState<ActorFilter>('all');
     const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
 
+    // Single audit source: simulator in demo mode, Supabase audit_log in live mode.
+    const audit: AuditEntry[] = useMemo(() => {
+        return isDemoMode() ? sim.audit : liveToSimShape(portal.auditEntries);
+    }, [sim.audit, portal.auditEntries]);
+
     // Filter audit entries
-    const filteredAudit = sim.audit.filter((entry) => {
+    const filteredAudit = audit.filter((entry) => {
         if (actorFilter !== 'all' && entry.actor.actorType !== actorFilter) return false;
         return true;
     });
 
     // Calculate KPIs
-    const systemCount = sim.audit.filter((e) => e.actor.actorType === 'system').length;
-    const humanCount = sim.audit.filter((e) => e.actor.actorType === 'human').length;
-    const latestEntry = sim.audit[0];
+    const systemCount = audit.filter((e) => e.actor.actorType === 'system').length;
+    const humanCount = audit.filter((e) => e.actor.actorType === 'human').length;
+    const latestEntry = audit[0];
 
     // Get county name
     const getCountyName = (jurisdictionId: string): string => {
@@ -95,7 +145,7 @@ const Audit: React.FC = () => {
     };
 
     // Empty state
-    if (sim.audit.length === 0) {
+    if (audit.length === 0) {
         return (
             <div>
                 <PageHeader

@@ -1,0 +1,26 @@
+# Claude Code worktree/session artifacts
+.claude/
+
+# Environment secrets (also ignored in app/.gitignore)
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Node
+node_modules/
+
+# Build
+dist/
+build/
+
+# Logs
+*.log
