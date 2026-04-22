@@ -101,14 +101,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Start auth initialization
         initAuth();
 
-        // Safety timeout - if auth takes too long, stop loading
+        // Safety fallback: if Supabase auth init hangs beyond 15s, unblock the
+        // UI so the portal doesn't stay in the loading spinner forever. Longer
+        // than before (was 8s) because Vercel→Supabase auth can be slow on cold
+        // starts and the old cutoff fired in normal-latency conditions.
         timeoutId = setTimeout(() => {
             if (mounted && !initialAuthComplete.current) {
-                console.warn('Auth initialization timed out after 8 seconds');
                 initialAuthComplete.current = true;
                 setLoading(false);
             }
-        }, 8000);
+        }, 15000);
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(

@@ -50,60 +50,31 @@ export function useSupabasePortal(): UsePortalDataReturn {
     // =============================================================================
 
     /**
-     * Fetch escalations from Supabase with timeout
+     * Fetch escalations from Supabase. Relies on the Supabase client's own
+     * fetch timeout (default 30s) rather than racing a short 10s timer —
+     * the old Promise.race kept losing to the HTTP call under Vercel→eu-west-2
+     * latency and wiped the feed to empty.
      */
     const fetchEscalations = useCallback(async (): Promise<void> => {
-        console.log('[useSupabasePortal] Fetching escalations...');
-
-        // Create a timeout promise
-        const timeoutPromise = new Promise<{ data: null; error: Error }>((resolve) => {
-            setTimeout(() => {
-                resolve({ data: null, error: new Error('Fetch timed out after 10 seconds') });
-            }, 10000);
-        });
-
         try {
-            console.log('[useSupabasePortal] Starting Supabase query...');
-
-            // Race between fetch and timeout
-            const result = await Promise.race([
-                supabase
-                    .from('escalations')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(INITIAL_FETCH_LIMIT),
-                timeoutPromise
-            ]);
-
-            console.log('[useSupabasePortal] Query completed, result:', result);
-
-            const { data, error } = result;
+            const { data, error } = await supabase
+                .from('escalations')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(INITIAL_FETCH_LIMIT);
 
             if (error) {
-                console.error('[useSupabasePortal] Failed to fetch escalations:', error.message);
-                return;
-            }
-
-            console.log('[useSupabasePortal] Fetched rows:', data?.length || 0);
-            if (data && data.length > 0) {
-                console.log('[useSupabasePortal] First row sample:', JSON.stringify(data[0], null, 2));
+                console.warn('[useSupabasePortal] escalations fetch error:', error.message);
+                return; // Preserve existing alerts on transient error
             }
 
             if (data && data.length > 0) {
                 const rows = data as RawEscalationRow[];
-                const models = toAlertCardModels(rows);
-
-                console.log('[useSupabasePortal] Converted to models:', models.length);
-
-                // Update seen keys
                 rows.forEach((row) => seenEscalationKeys.current.add(row.escalation_key));
-
-                setAlerts(models);
-            } else {
-                console.log('[useSupabasePortal] No escalations found in database');
+                setAlerts(toAlertCardModels(rows));
             }
         } catch (err) {
-            console.error('[useSupabasePortal] Fetch error:', err);
+            console.warn('[useSupabasePortal] escalations fetch threw:', err);
         }
     }, []);
 
