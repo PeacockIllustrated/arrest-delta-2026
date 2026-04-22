@@ -5,6 +5,7 @@ import { usePageTitle } from '../../hooks/usePageTitle';
 import { useRecordSearch } from '../../hooks/useRecordSearch';
 import { useCountyStats } from '../../hooks/useCountyStats';
 import { useAuth } from '../../hooks/useAuth';
+import { isLiveDemoBypass } from '../../hooks/usePortalData';
 import { useRole } from '../../hooks/useRole';
 import { supabase } from '../../lib/supabase';
 import type { RecordSearchResult } from '../../lib/types/viewModels';
@@ -13,6 +14,7 @@ import {
   UNAVAILABLE_COUNTY_FIPS,
   buildFipsToCountyIdMap,
 } from '../../lib/utils/fipsMapping';
+import { canonicalSvgFipsFor } from '../../lib/utils/canonicalFips';
 
 // =============================================================================
 // RECORD SEARCH PAGE - Search and browse enriched records with interactive map
@@ -49,9 +51,16 @@ const RecordSearch: React.FC = () => {
   const [selectedCountyFips, setSelectedCountyFips] = useState<string | null>(null);
   const [selectedCountyName, setSelectedCountyName] = useState<string | null>(null);
 
-  // Build FIPS to county ID map
+  // Build canonical-FIPS-to-county-id map (db fips is corrupted; use canonical
+  // from national_county.txt so map clicks select the right county_id).
   const fipsToCountyId = useMemo(() => {
-    return buildFipsToCountyIdMap(counties);
+    // Keep old db-fips map as fallback (for the ~5% of rows that were correct).
+    const map = buildFipsToCountyIdMap(counties);
+    for (const c of counties) {
+      const svgFips = canonicalSvgFipsFor(c.state ?? null, c.name ?? null);
+      if (svgFips && !map.has(svgFips)) map.set(svgFips, c.countyId);
+    }
+    return map;
   }, [counties]);
 
   // State for real county record counts
@@ -63,69 +72,45 @@ const RecordSearch: React.FC = () => {
   // State for available sources
   const [availableSources, setAvailableSources] = useState<{ source_id: number; name: string; display_name: string }[]>([]);
 
-  // Fetch county record counts from database using RPC (efficient server-side aggregation)
+  // Fetch county record counts, then remap county_id -> canonical US Census FIPS
+  // using the shipped national_county.txt asset. We deliberately ignore
+  // `counties.fips` because the live DB has corrupted values for most non-FL
+  // counties (state prefix correct, county portion randomised).
   useEffect(() => {
     if (isDemo) return;
 
     const fetchCountyCounts = async () => {
       setCountsLoading(true);
       try {
-        // First try the RPC function (most efficient - server-side aggregation)
-        const { data: rpcData, error: rpcError } = await supabase.rpc(
-          'get_candidate_county_counts'
-        );
-
-        if (!rpcError && rpcData && rpcData.length > 0) {
-          // RPC worked - use its data directly
-          const countsByFips = new Map<string, number>();
-          let totalRecords = 0;
-
-          for (const row of rpcData) {
-            if (row.fips && row.record_count > 0) {
-              const svgFips = `c${row.fips}`;
-              countsByFips.set(svgFips, row.record_count);
-              totalRecords += row.record_count;
-            }
-          }
-
-          console.log('[RecordSearch] ===== RPC COUNTY DATA =====');
-          console.log('[RecordSearch] Total records:', totalRecords);
-          console.log('[RecordSearch] Counties with data:', countsByFips.size);
-          console.log('[RecordSearch] Sample entries:', Array.from(countsByFips.entries()).slice(0, 5));
-          console.log('[RecordSearch] ✅ SUCCESS: Using RPC aggregation');
-          console.log('[RecordSearch] ===== END DEBUG =====');
-
-          setLiveCountyRecordCounts(countsByFips);
-          return;
-        }
-
-        // Fallback: Manual aggregation if RPC not available
-        console.log('[RecordSearch] RPC not available, falling back to manual aggregation');
-        console.log('[RecordSearch] RPC error:', rpcError?.message);
-
-        // Get counties for FIPS mapping
+        // 1. Load counties with name + state so we can compute canonical FIPS.
         const { data: countiesData, error: countiesError } = await supabase
           .from('counties')
-          .select('county_id, fips');
+          .select('county_id, name, state')
+          .limit(5000);
 
         if (countiesError) {
           console.error('[RecordSearch] Failed to fetch counties:', countiesError);
           return;
         }
 
-        const countyFipsMap = new Map<number, string>();
-        for (const county of countiesData || []) {
-          if (county.fips) {
-            countyFipsMap.set(county.county_id, county.fips);
+        // county_id -> canonical SVG FIPS (e.g. 'c04013' for Maricopa AZ)
+        const countyIdToCanonicalFips = new Map<number, string>();
+        let unmapped = 0;
+        for (const c of countiesData || []) {
+          const svgFips = canonicalSvgFipsFor(c.state as string, c.name as string);
+          if (svgFips) {
+            countyIdToCanonicalFips.set(c.county_id as number, svgFips);
+          } else {
+            unmapped++;
           }
         }
+        console.log(`[RecordSearch] Canonical FIPS: ${countyIdToCanonicalFips.size} mapped, ${unmapped} unmapped`);
 
-        // Fetch candidate_records in pages to work around 1000 row limit
+        // 2. Aggregate candidate_records by county_id in pages (PostgREST caps at 1000/req).
         const countsByCountyId = new Map<number, number>();
         let offset = 0;
         const pageSize = 1000;
         let hasMore = true;
-
         while (hasMore) {
           const { data, error } = await supabase
             .from('candidate_records')
@@ -134,48 +119,41 @@ const RecordSearch: React.FC = () => {
             .range(offset, offset + pageSize - 1);
 
           if (error) {
-            console.error('[RecordSearch] Failed to fetch records:', error);
+            console.error('[RecordSearch] records page error:', error.message);
             break;
           }
+          if (!data || data.length === 0) { hasMore = false; break; }
 
-          if (!data || data.length === 0) {
-            hasMore = false;
-            break;
+          for (const row of data) {
+            const cid = row.county_id as number;
+            countsByCountyId.set(cid, (countsByCountyId.get(cid) || 0) + 1);
           }
-
-          for (const record of data) {
-            const countyId = record.county_id as number;
-            countsByCountyId.set(countyId, (countsByCountyId.get(countyId) || 0) + 1);
-          }
-
           hasMore = data.length === pageSize;
           offset += pageSize;
-
-          // Safety limit
-          if (offset > 100000) {
-            console.warn('[RecordSearch] Hit safety limit at 100k records');
-            break;
-          }
+          if (offset > 200000) { console.warn('[RecordSearch] hit 200k safety cap'); break; }
         }
 
-        // Convert to FIPS
+        // 3. Fold into canonical-FIPS-keyed map. Counties that don't match the
+        //    canonical list are dropped (usually junk rows like name="1").
         const countsByFips = new Map<string, number>();
+        let mapped = 0, dropped = 0;
         for (const [countyId, count] of countsByCountyId) {
-          const fips = countyFipsMap.get(countyId);
-          if (fips) {
-            countsByFips.set(`c${fips}`, count);
-          }
+          const svgFips = countyIdToCanonicalFips.get(countyId);
+          if (svgFips) { countsByFips.set(svgFips, (countsByFips.get(svgFips) || 0) + count); mapped += count; }
+          else { dropped += count; }
         }
 
-        const totalMapped = Array.from(countsByFips.values()).reduce((a, b) => a + b, 0);
-        console.log('[RecordSearch] ===== FALLBACK COUNTY DATA =====');
-        console.log('[RecordSearch] Total records:', totalMapped);
-        console.log('[RecordSearch] Counties with data:', countsByFips.size);
-        console.log('[RecordSearch] ===== END DEBUG =====');
+        const statesRepresented = new Set(
+          Array.from(countsByFips.keys()).map(k => k.slice(1, 3))
+        );
+        console.log(
+          `[RecordSearch] records: ${mapped} mapped / ${dropped} dropped, ` +
+          `${countsByFips.size} counties across ${statesRepresented.size} states`
+        );
 
         setLiveCountyRecordCounts(countsByFips);
       } catch (err) {
-        console.error('[RecordSearch] Error fetching county counts:', err);
+        console.error('[RecordSearch] fetchCountyCounts threw:', err);
       } finally {
         setCountsLoading(false);
       }
@@ -346,8 +324,8 @@ const RecordSearch: React.FC = () => {
     return 'All Records';
   }, [selectedState, selectedCountyName]);
 
-  // Show login required message if not authenticated (skip in demo mode)
-  if (!isDemo && !authLoading && !user) {
+  // Show login required message if not authenticated (skip in demo or live-demo bypass mode)
+  if (!isDemo && !isLiveDemoBypass() && !authLoading && !user) {
     return (
       <div>
         <PageHeader

@@ -35,7 +35,8 @@ import { maskRecordDetail } from '../lib/access/dataMasking';
 // CONFIGURATION
 // =============================================================================
 
-const FETCH_TIMEOUT_MS = 20000; // 20 seconds
+// Removed the short client-side timeout — Supabase's own timeout is sufficient
+// and the race was wiping the record list under Vercel→eu-west-2 latency.
 
 // =============================================================================
 // TYPES
@@ -348,18 +349,7 @@ export function useRecordSearch(): UseRecordSearchReturn {
         const to = from + searchParams.pageSize - 1;
         query = query.range(from, to);
 
-        // Create timeout promise
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Search timeout')), FETCH_TIMEOUT_MS);
-        });
-
-        // Execute query with timeout
-        const { data, error, count } = await Promise.race([
-          query,
-          timeoutPromise.then(() => {
-            throw new Error('Search timeout');
-          }),
-        ]);
+        const { data, error, count } = await query;
 
         if (error) {
           throw new Error(error.message);

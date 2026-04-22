@@ -43,6 +43,8 @@ export interface CountyModel {
   name: string;
   slug: string;
   fips: string;
+  /** US state abbreviation (e.g. 'FL', 'CA'). Optional — only populated from live DB. */
+  state?: string | null;
   population: number | null;
   region: string | null;
 }

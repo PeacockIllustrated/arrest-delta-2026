@@ -153,6 +153,7 @@ export function toCountyModel(county: County): CountyModel {
     name: county.name,
     slug: county.slug,
     fips: county.fips,
+    state: county.state ?? null,
     population: county.population,
     region: county.region,
   };
