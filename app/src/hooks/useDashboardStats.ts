@@ -32,7 +32,6 @@ import {
 // =============================================================================
 
 const POLLING_INTERVAL_MS = 60000; // 1 minute
-const FETCH_TIMEOUT_MS = 15000; // 15 seconds
 
 // =============================================================================
 // TYPES
@@ -373,22 +372,13 @@ export function useDashboardStats(
     }));
 
     try {
-      // Create timeout promise
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Fetch timeout')), FETCH_TIMEOUT_MS);
-      });
-
-      // Race between fetches and timeout
-      const [overviewResult, countiesResult, reliabilityResult, trendResult] = await Promise.race([
-        Promise.all([
-          fetchOverview(),
-          fetchTopCounties(),
-          fetchSourceReliability(),
-          fetchDailyTrend(),
-        ]),
-        timeoutPromise.then(() => {
-          throw new Error('Fetch timeout');
-        }),
+      // Supabase client has its own timeout — no need to race a short client-side one.
+      // The previous 15s race was firing from Vercel→eu-west-2 under normal latency.
+      const [overviewResult, countiesResult, reliabilityResult, trendResult] = await Promise.all([
+        fetchOverview(),
+        fetchTopCounties(),
+        fetchSourceReliability(),
+        fetchDailyTrend(),
       ]);
 
       // Update state
