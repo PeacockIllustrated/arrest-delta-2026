@@ -3,6 +3,7 @@ import { PageHeader, Card, CardHeader, CardBody, Badge } from '../../components/
 import DeepMapViz from '../../components/visuals/DeepMapViz';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { usePortalData, type AlertCardModel } from '../../hooks/usePortalData';
+import BiometricBadge from '../../components/portal/BiometricBadge';
 import { JURISDICTION_MAP } from '../../lib/demo/demoJurisdictions';
 
 // =============================================================================
@@ -347,13 +348,14 @@ const Dashboard: React.FC = () => {
                                                 {alert.confidenceScore}%
                                             </Badge>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                                            <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
                                                 {alert.topCharge && (
                                                     <Badge variant="default" size="sm">
                                                         {alert.topCharge}
                                                     </Badge>
                                                 )}
+                                                <BiometricBadge biometric={alert.biometric} compact />
                                                 <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
                                                     {getCountyName(alert.jurisdictionId).replace(' County', '')}
                                                 </span>

@@ -101,6 +101,10 @@ export interface AlertCardModel {
     chargeCount: number;
     status: 'new' | 'reviewed' | 'escalated';
     runId: string;
+    /** Biometric match result for this subject's mugshot. Optional — only present
+     * when the pipeline actually ran a face-match pass. In demo mode this is
+     * computed deterministically from the personId so scores stay stable. */
+    biometric?: BiometricResult;
 }
 
 /**
@@ -144,6 +148,28 @@ export interface PipelineRunModel {
 // PORTAL DATA RETURN TYPE
 // This is the unified interface consumed by all portal UI components.
 // =============================================================================
+
+// Deterministic demo biometric result derived from a personId.
+// ~60% "verified" with 82-98 confidence (strong match), 25% "unverified" with
+// 45-74 confidence (weak/no match), 15% none (not checked yet). Uses a cheap
+// string hash so the same person gets the same outcome across re-renders.
+function computeDemoBiometric(personId: string): BiometricResult {
+    let h = 0;
+    for (let i = 0; i < personId.length; i++) {
+        h = ((h << 5) - h) + personId.charCodeAt(i);
+        h |= 0;
+    }
+    const bucket = Math.abs(h) % 100;
+    if (bucket < 60) {
+        const confidence = 82 + (Math.abs(h >> 3) % 17); // 82-98
+        return { verified: true, confidence, method: 'face_match' };
+    }
+    if (bucket < 85) {
+        const confidence = 45 + (Math.abs(h >> 3) % 30); // 45-74
+        return { verified: false, confidence, method: 'face_match' };
+    }
+    return { verified: false, confidence: 0, method: 'none' };
+}
 
 /**
  * Coverage data for a jurisdiction (for KPI cards)
@@ -229,7 +255,14 @@ export function usePortalData(): UsePortalDataReturn {
     const sim = useDemoSim();
 
     // Map simulator events to AlertCardModel
-    const alerts: AlertCardModel[] = sim.events.map((event) => ({
+    const alerts: AlertCardModel[] = sim.events.map((event) => {
+        const hasMug = Boolean(event.evidence.recordAfter.person.mugshotUrl);
+        // Deterministic biometric outcome from personId hash so scores stay
+        // stable across re-renders and match up between rows for the same person.
+        const biometric = hasMug
+            ? computeDemoBiometric(event.evidence.recordAfter.person.personId)
+            : undefined;
+        return ({
         escalationKey: `${event.personId}|${event.evidence.recordAfter.bookingRef}`,
         createdAt: event.createdAtISO,
         subject: {
@@ -246,7 +279,9 @@ export function usePortalData(): UsePortalDataReturn {
         chargeCount: event.evidence.recordAfter.charges.length,
         status: event.status,
         runId: `demo-run-${event.eventId.split('-')[1]}`,
-    }));
+        biometric,
+    });
+    });
 
     // Map simulator audit to AuditLogEntryModel
     const auditEntries: AuditLogEntryModel[] = sim.audit.map((entry) => ({

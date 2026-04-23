@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { PageHeader, Card, CardHeader, CardBody, Badge, Button, EmptyState } from '../../components/ui';
 import { SearchIcon, PersonIcon, LocationIcon, BellIcon, DocumentIcon, CheckIcon, XIcon, EyeIcon } from '../../components/portal/Icons';
+import { REAL_MUGSHOT_ENTRIES } from '../../lib/demo/realMugshots';
 
 // =============================================================================
-// TYPES - Ready for API integration
+// TYPES
 // =============================================================================
 
 interface MugshotMatch {
@@ -14,14 +15,56 @@ interface MugshotMatch {
     last_known_address: string;
     arrest_count: number;
     last_arrest_date: string | null;
+    mugshotUrl: string;
+    topCharge: string | null;
 }
 
 // =============================================================================
-// MOCK DATA - Replace with Face Match API
-// TODO: Connect to facial recognition service
+// TIER 1 DEMO MATCHER
 // =============================================================================
+// Real facial recognition isn't wired up yet (see scraper StubBiometricGate).
+// For the demo we simulate the UX: on upload, hash the file to pick a
+// deterministic anchor index into REAL_MUGSHOT_ENTRIES, then return 10
+// candidates with scores falling off from the anchor. Result: same photo always
+// returns the same matches, and every match is a real person + real mugshot.
+function hashString(s: string): number {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+        h = ((h << 5) - h) + s.charCodeAt(i);
+        h |= 0;
+    }
+    return Math.abs(h);
+}
 
-const mockMatches: MugshotMatch[] = [];
+function rankedMatches(probeKey: string): MugshotMatch[] {
+    if (REAL_MUGSHOT_ENTRIES.length === 0) return [];
+    const anchor = hashString(probeKey) % REAL_MUGSHOT_ENTRIES.length;
+    const take = 10;
+    const out: MugshotMatch[] = [];
+    for (let i = 0; i < take; i++) {
+        const entry = REAL_MUGSHOT_ENTRIES[(anchor + i) % REAL_MUGSHOT_ENTRIES.length];
+        // Confidence falls off quickly after the top match; tuned so the #1 is
+        // high-90s, #2-3 are mid-80s, tail drops into 60s.
+        const base = 97 - (i * 4) - (hashString(entry.personId) % 3);
+        const confidence = Math.max(40, base);
+        const priorArrests = (hashString(entry.personId + 'arr') % 6) + 1;
+        const lastDaysAgo = (hashString(entry.personId + 'date') % 800) + 30;
+        const lastDate = new Date(Date.now() - lastDaysAgo * 86400 * 1000)
+            .toISOString().split('T')[0];
+        out.push({
+            id: entry.personId,
+            name: entry.displayName,
+            confidence,
+            dob: entry.dobYear ? String(entry.dobYear) : 'Unknown',
+            last_known_address: `${entry.countyDisplayName}, ${entry.stateCode}`,
+            arrest_count: priorArrests,
+            last_arrest_date: lastDate,
+            mugshotUrl: entry.mugshotUrl,
+            topCharge: entry.topCharge,
+        });
+    }
+    return out;
+}
 
 // =============================================================================
 // COMPONENT
@@ -31,14 +74,33 @@ const MugshotSearch: React.FC = () => {
     const [hasUploaded, setHasUploaded] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const [selectedMatch, setSelectedMatch] = useState<MugshotMatch | null>(null);
+    const [probePreview, setProbePreview] = useState<string | null>(null);
+    const [matches, setMatches] = useState<MugshotMatch[]>([]);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleUpload = () => {
+    const runMatch = (probeKey: string, previewUrl: string | null) => {
         setIsProcessing(true);
-        // Simulate processing
+        setProbePreview(previewUrl);
+        // Simulate network + model inference latency
         setTimeout(() => {
+            setMatches(rankedMatches(probeKey));
             setIsProcessing(false);
             setHasUploaded(true);
-        }, 1500);
+        }, 1400);
+    };
+
+    const handleFile = (file: File) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            runMatch(`${file.name}|${file.size}`, typeof reader.result === 'string' ? reader.result : null);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleUpload = () => {
+        // No real file — deterministic anchor off current timestamp so demos
+        // can re-click for variety (but a real file always returns consistent matches).
+        runMatch(`demo-${Math.floor(Date.now() / 60000)}`, null);
     };
 
     const getConfidenceColor = (confidence: number) => {
@@ -87,10 +149,21 @@ const MugshotSearch: React.FC = () => {
                             e.preventDefault();
                             e.currentTarget.style.borderColor = 'var(--border-default)';
                             e.currentTarget.style.background = 'var(--bg-elevated)';
-                            handleUpload();
+                            const file = e.dataTransfer?.files?.[0];
+                            if (file) handleFile(file); else handleUpload();
                         }}
-                        onClick={handleUpload}
+                        onClick={() => fileInputRef.current?.click()}
                     >
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            style={{ display: 'none' }}
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleFile(file);
+                            }}
+                        />
                         {isProcessing ? (
                             <div>
                                 <div style={{ marginBottom: '16px', color: 'var(--accent)' }}>
@@ -104,24 +177,36 @@ const MugshotSearch: React.FC = () => {
                                 </p>
                             </div>
                         ) : hasUploaded ? (
-                            <div>
-                                <div style={{ marginBottom: '16px', color: 'var(--success)' }}>
-                                    <CheckIcon size={48} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '24px', justifyContent: 'center' }}>
+                                {probePreview && (
+                                    <img
+                                        src={probePreview}
+                                        alt="probe"
+                                        style={{ width: 96, height: 96, borderRadius: 8, objectFit: 'cover', border: '1px solid var(--border-default)' }}
+                                    />
+                                )}
+                                <div style={{ textAlign: 'left' }}>
+                                    <div style={{ marginBottom: '8px', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <CheckIcon size={20} />
+                                        <span style={{ fontWeight: 500 }}>Image matched — {matches.length} candidates</span>
+                                    </div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                        Top match confidence: {matches[0]?.confidence ?? 0}%
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        style={{ marginTop: '8px' }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setHasUploaded(false);
+                                            setProbePreview(null);
+                                            setMatches([]);
+                                        }}
+                                    >
+                                        Upload New Image
+                                    </Button>
                                 </div>
-                                <p style={{ margin: 0, color: 'var(--success)', fontWeight: 500 }}>
-                                    Image uploaded successfully
-                                </p>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    style={{ marginTop: '12px' }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setHasUploaded(false);
-                                    }}
-                                >
-                                    Upload New Image
-                                </Button>
                             </div>
                         ) : (
                             <div>
@@ -143,7 +228,7 @@ const MugshotSearch: React.FC = () => {
             {/* Results */}
             <Card>
                 <CardHeader>
-                    {hasUploaded ? `Potential Matches (${mockMatches.length} found)` : 'Matches'}
+                    {hasUploaded ? `Potential Matches (${matches.length} found)` : 'Matches'}
                 </CardHeader>
                 <CardBody>
                     {!hasUploaded ? (
@@ -158,7 +243,7 @@ const MugshotSearch: React.FC = () => {
                             gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
                             gap: '16px',
                         }}>
-                            {mockMatches.map((match) => (
+                            {matches.map((match) => (
                                 <div
                                     key={match.id}
                                     onClick={() => setSelectedMatch(match)}
@@ -172,21 +257,26 @@ const MugshotSearch: React.FC = () => {
                                     }}
                                 >
                                     <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
-                                        {/* Placeholder mugshot */}
+                                        {/* Real mugshot from Supabase Storage */}
                                         <div
                                             style={{
                                                 width: '64px',
                                                 height: '80px',
                                                 background: 'var(--bg-base)',
                                                 borderRadius: '4px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
+                                                overflow: 'hidden',
                                                 flexShrink: 0,
-                                                color: 'var(--text-muted)',
+                                                position: 'relative',
                                             }}
                                         >
-                                            <PersonIcon size={32} />
+                                            <img
+                                                src={match.mugshotUrl}
+                                                alt={match.name}
+                                                referrerPolicy="no-referrer"
+                                                loading="lazy"
+                                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            />
                                         </div>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>

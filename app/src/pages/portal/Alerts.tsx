@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { PageHeader, Card, CardBody, Badge, Button, Input, EmptyState } from '../../components/ui';
 import { usePageTitle } from '../../hooks/usePageTitle';
 import { usePortalData, type AlertCardModel } from '../../hooks/usePortalData';
+import BiometricBadge from '../../components/portal/BiometricBadge';
 
 type SeverityBand = 'critical' | 'high' | 'medium' | 'low';
 type StatusFilter = AlertCardModel['status'] | 'all';
@@ -202,10 +203,11 @@ const Alerts: React.FC = () => {
                                             <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                                                 {alert.topCharge ?? 'No charge detail'}{alert.chargeCount > 1 ? ` + ${alert.chargeCount - 1} more` : ''}
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.75rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
                                                 <span>{alert.jurisdictionLabel}</span>
                                                 <span>{formatRelative(alert.createdAt)}</span>
                                                 {alert.subject.dobYear && <span>DOB {alert.subject.dobYear}</span>}
+                                                <BiometricBadge biometric={alert.biometric} />
                                             </div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
