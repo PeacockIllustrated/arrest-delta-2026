@@ -369,17 +369,22 @@ export function useDemoSimulator(): UseDemoSimulatorReturn {
         // Create parsed records
         const { confidence, reasons } = computeConfidence(person, bookingRef, health);
 
+        // If the selected roster entry is a real record (has a real mugshot),
+        // propagate the mugshot URL to the parsed records so the UI can show it.
+        const personWithMugshot = {
+            personId: person.personId,
+            displayName: person.displayName,
+            dobYear: person.dobYear,
+            ...(person.mugshotUrl ? { mugshotUrl: person.mugshotUrl } : {}),
+        };
+
         const recordBefore: ParsedRecord = {
             recordId: `REC-${uid()}`,
             snapshotId: snapshotBeforeId,
             jurisdictionId,
             observedAtISO: snapshotBefore.capturedAtISO,
             bookingRef: eventType === 'booking_created' ? '' : bookingRef,
-            person: {
-                personId: person.personId,
-                displayName: person.displayName,
-                dobYear: person.dobYear,
-            },
+            person: personWithMugshot,
             charges: chargesBefore,
             custodyStatus: custodyBefore,
             match: { matchConfidence: confidence, matchReasons: reasons },
@@ -391,11 +396,7 @@ export function useDemoSimulator(): UseDemoSimulatorReturn {
             jurisdictionId,
             observedAtISO: now,
             bookingRef,
-            person: {
-                personId: person.personId,
-                displayName: person.displayName,
-                dobYear: person.dobYear,
-            },
+            person: personWithMugshot,
             charges: chargesAfter,
             custodyStatus: custodyAfter,
             match: { matchConfidence: confidence, matchReasons: reasons },

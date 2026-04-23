@@ -173,6 +173,23 @@ const Alerts: React.FC = () => {
                                         onClick={() => portal.markStatus(alert.escalationKey, 'reviewed')}
                                     >
                                         <div style={{ width: '4px', minHeight: '60px', borderRadius: '2px', background: cfg.color, flexShrink: 0 }} />
+                                        {alert.subject.mugshotUrl && (
+                                            <img
+                                                src={alert.subject.mugshotUrl}
+                                                alt=""
+                                                referrerPolicy="no-referrer"
+                                                loading="lazy"
+                                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                style={{
+                                                    width: '48px',
+                                                    height: '48px',
+                                                    borderRadius: '4px',
+                                                    objectFit: 'cover',
+                                                    flexShrink: 0,
+                                                    background: 'var(--bg-elevated)',
+                                                }}
+                                            />
+                                        )}
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
                                                 <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{alert.subject.subjectName}</span>

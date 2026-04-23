@@ -39,6 +39,8 @@ export interface ParsedRecord {
         personId: string;
         displayName: string; // Synthetic name
         dobYear: number;
+        /** Optional mugshot URL — only set when the roster entry maps to a real photo. */
+        mugshotUrl?: string;
     };
     charges: string[];
     custodyStatus: 'in_custody' | 'released' | 'unknown';

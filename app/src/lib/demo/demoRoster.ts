@@ -7,6 +7,10 @@ export interface DemoRosterEntry {
     displayName: string;
     dobYear: number;
     jurisdictionId: string; // Links to DEMO_JURISDICTIONS
+    /** When present, the demo uses this real mugshot URL (from public Supabase bucket). */
+    mugshotUrl?: string;
+    /** When present, overrides the simulator's random charge pool for this person. */
+    topCharge?: string;
 }
 
 // Synthetic first and last name pools
@@ -118,9 +122,31 @@ function generateRoster(): DemoRosterEntry[] {
 }
 
 /**
- * Full demo roster - 90 synthetic individuals
+ * Full demo roster — synthetic individuals PLUS the real-mugshot seed entries.
+ * Real entries are duplicated 4x each so they appear more often in the feed,
+ * making the demo's mugshot slots non-empty most of the time.
  */
-export const DEMO_ROSTER: DemoRosterEntry[] = generateRoster();
+import { REAL_MUGSHOT_ENTRIES } from './realMugshots';
+export const DEMO_ROSTER: DemoRosterEntry[] = (() => {
+    const synthetic = generateRoster();
+    const realEntries: DemoRosterEntry[] = [];
+    for (const r of REAL_MUGSHOT_ENTRIES) {
+        // Repeat 15x so each real jurisdiction has comparable roster weight to
+        // the hardcoded FL/TX/CA jurisdictions (which have 15-25 synthetic
+        // people each). Without this, real mugshots appear in <10% of alerts.
+        for (let i = 0; i < 15; i++) {
+            realEntries.push({
+                personId: `${r.personId}-${i}`,
+                displayName: r.displayName,
+                dobYear: r.dobYear,
+                jurisdictionId: r.jurisdictionId,
+                mugshotUrl: r.mugshotUrl,
+                topCharge: r.topCharge ?? undefined,
+            });
+        }
+    }
+    return [...synthetic, ...realEntries];
+})();
 
 /**
  * Get roster entries by jurisdiction

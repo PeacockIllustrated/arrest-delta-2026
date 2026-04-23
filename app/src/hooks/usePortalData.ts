@@ -235,7 +235,8 @@ export function usePortalData(): UsePortalDataReturn {
         subject: {
             subjectName: event.evidence.recordAfter.person.displayName,
             dobYear: event.evidence.recordAfter.person.dobYear,
-            mugshotUrl: null, // Demo mode has no real mugshots
+            // Real mugshot URL for real-record entries; null for synthetic ones.
+            mugshotUrl: event.evidence.recordAfter.person.mugshotUrl ?? null,
         },
         jurisdictionId: event.jurisdictionId,
         jurisdictionLabel: event.evidence.source.label,

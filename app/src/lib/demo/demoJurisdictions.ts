@@ -76,6 +76,21 @@ export const DEMO_JURISDICTIONS: DemoJurisdiction[] = [
     { jurisdictionId: 'c08031', displayName: 'Denver County',        stateCode: 'CO', stateName: 'Colorado',     defaultHealth: 'healthy' },
 ];
 
+// Merge in the jurisdictions covered by real-mugshot seed entries so the map
+// pulses those counties too (e.g. Dauphin PA, Sumner TN, Yellowstone MT).
+import { REAL_MUGSHOT_JURISDICTIONS } from './realMugshots';
+for (const rj of REAL_MUGSHOT_JURISDICTIONS) {
+    if (!DEMO_JURISDICTIONS.some((d) => d.jurisdictionId === rj.jurisdictionId)) {
+        DEMO_JURISDICTIONS.push({
+            jurisdictionId: rj.jurisdictionId,
+            displayName: rj.displayName,
+            stateCode: rj.stateCode,
+            stateName: rj.stateName,
+            defaultHealth: 'healthy',
+        });
+    }
+}
+
 export const JURISDICTION_MAP: Record<string, DemoJurisdiction> = Object.fromEntries(
     DEMO_JURISDICTIONS.map((j) => [j.jurisdictionId, j])
 );
