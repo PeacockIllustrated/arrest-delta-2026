@@ -279,6 +279,9 @@ const Dashboard: React.FC = () => {
                                             cursor: 'pointer',
                                             transition: 'all 0.15s ease',
                                             background: selectedAlert?.escalationKey === alert.escalationKey ? 'var(--accent-muted)' : 'transparent',
+                                            display: 'flex',
+                                            gap: '12px',
+                                            alignItems: 'flex-start',
                                         }}
                                         onMouseEnter={(e) => {
                                             if (selectedAlert?.escalationKey !== alert.escalationKey) {
@@ -291,6 +294,44 @@ const Dashboard: React.FC = () => {
                                             }
                                         }}
                                     >
+                                        {/* Mugshot thumbnail (real bucket URL when the roster entry is a real record) */}
+                                        {alert.subject.mugshotUrl ? (
+                                            <img
+                                                src={alert.subject.mugshotUrl}
+                                                alt=""
+                                                referrerPolicy="no-referrer"
+                                                loading="lazy"
+                                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '4px',
+                                                    objectFit: 'cover',
+                                                    background: 'var(--bg-elevated)',
+                                                    flexShrink: 0,
+                                                }}
+                                            />
+                                        ) : (
+                                            <div
+                                                aria-hidden
+                                                style={{
+                                                    width: '40px',
+                                                    height: '40px',
+                                                    borderRadius: '4px',
+                                                    background: 'var(--bg-elevated)',
+                                                    flexShrink: 0,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: 'var(--text-muted)',
+                                                    fontSize: '0.65rem',
+                                                    letterSpacing: '0.05em',
+                                                }}
+                                            >
+                                                N/A
+                                            </div>
+                                        )}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                                             <div>
                                                 <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem' }}>
@@ -366,6 +407,7 @@ const Dashboard: React.FC = () => {
                                                     {formatRelativeTime(alert.createdAt)}
                                                 </span>
                                             </div>
+                                        </div>
                                         </div>
                                     </div>
                                 ))
