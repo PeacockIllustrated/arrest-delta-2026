@@ -342,13 +342,18 @@ export function useDemoSimulator(): UseDemoSimulatorReturn {
             parserVersion: PARSER_VERSION,
         };
 
-        // Charges based on event type
+        // Charges based on event type. When the roster entry is a real record
+        // and carries its actual topCharge, prefer that so the UI shows the
+        // real charge text from the database.
+        const realCharge = (person as { topCharge?: string }).topCharge;
         const chargesBefore = eventType === 'booking_created' ? [] : pick(CHARGE_POOLS.booking_created);
-        const chargesAfter = eventType === 'charge_updated'
-            ? [...chargesBefore, ...pick(CHARGE_POOLS.charge_updated)]
-            : eventType === 'booking_created'
-                ? pick(CHARGE_POOLS.booking_created)
-                : chargesBefore;
+        const chargesAfter = realCharge
+            ? [realCharge]
+            : eventType === 'charge_updated'
+                ? [...chargesBefore, ...pick(CHARGE_POOLS.charge_updated)]
+                : eventType === 'booking_created'
+                    ? pick(CHARGE_POOLS.booking_created)
+                    : chargesBefore;
 
         // Custody status changes
         const custodyBefore: ParsedRecord['custodyStatus'] = eventType === 'booking_created' ? 'unknown' : 'in_custody';

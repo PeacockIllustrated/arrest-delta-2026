@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader, Card, CardBody, Badge, Button, Input, EmptyState } from '../../components/ui';
 import { PersonIcon, LocationIcon, ListIcon } from '../../components/portal/Icons';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import { REAL_MUGSHOT_ENTRIES } from '../../lib/demo/realMugshots';
 
 // =============================================================================
 // TYPES - Ready for Supabase integration
@@ -31,16 +32,53 @@ export interface Employee {
 // TODO: Connect to Supabase table `employees`
 // =============================================================================
 
-const mockEmployees: Employee[] = [
-    { id: 'emp-001', name: 'John Michael Smith', role: 'Driver', department: 'Logistics', location: 'Los Angeles, CA', status: 'active', risk_level: 'high', last_check: '2026-01-01T19:20:00Z', active_alerts: 3, active_incidents: 1, created_at: '2025-06-15T10:00:00Z', updated_at: '2026-01-01T19:20:00Z' },
-    { id: 'emp-002', name: 'Jane Anne Doe', role: 'Driver', department: 'Logistics', location: 'Houston, TX', status: 'active', risk_level: 'medium', last_check: '2026-01-01T19:05:00Z', active_alerts: 2, active_incidents: 0, created_at: '2025-07-20T14:00:00Z', updated_at: '2026-01-01T19:05:00Z' },
-    { id: 'emp-003', name: 'Robert James Wilson', role: 'Warehouse Associate', department: 'Operations', location: 'Chicago, IL', status: 'active', risk_level: 'low', last_check: '2026-01-01T17:30:00Z', active_alerts: 0, active_incidents: 0, created_at: '2025-04-10T09:00:00Z', updated_at: '2026-01-01T17:30:00Z' },
-    { id: 'emp-004', name: 'Maria Garcia', role: 'Driver', department: 'Logistics', location: 'Phoenix, AZ', status: 'suspended', risk_level: 'critical', last_check: '2025-12-30T14:00:00Z', active_alerts: 5, active_incidents: 2, created_at: '2025-03-01T11:00:00Z', updated_at: '2025-12-30T14:00:00Z' },
-    { id: 'emp-005', name: 'David Chen', role: 'Manager', department: 'Operations', location: 'Seattle, WA', status: 'active', risk_level: 'low', last_check: '2026-01-02T08:00:00Z', active_alerts: 0, active_incidents: 0, created_at: '2024-11-15T10:00:00Z', updated_at: '2026-01-02T08:00:00Z' },
-    { id: 'emp-006', name: 'Ashley Thompson', role: 'Driver', department: 'Logistics', location: 'Atlanta, GA', status: 'active', risk_level: 'medium', last_check: '2026-01-02T09:15:00Z', active_alerts: 1, active_incidents: 0, created_at: '2025-08-12T10:00:00Z', updated_at: '2026-01-02T09:15:00Z' },
-    { id: 'emp-007', name: 'Marcus Lee', role: 'Dispatcher', department: 'Operations', location: 'New York, NY', status: 'active', risk_level: 'low', last_check: '2026-01-02T07:45:00Z', active_alerts: 0, active_incidents: 0, created_at: '2025-05-03T10:00:00Z', updated_at: '2026-01-02T07:45:00Z' },
-    { id: 'emp-008', name: 'Sarah Thompson', role: 'Driver', department: 'Logistics', location: 'Miami, FL', status: 'active', risk_level: 'medium', last_check: '2026-01-02T08:50:00Z', active_alerts: 2, active_incidents: 0, created_at: '2025-09-01T10:00:00Z', updated_at: '2026-01-02T08:50:00Z' },
-];
+// Employees seeded from 100 real records in Supabase. Each employee has a
+// real mugshot, real name, real county+state, and derived risk/alerts based
+// on their real charge data. Deterministic by index so order is stable.
+const ROLES = ['Driver', 'Warehouse Associate', 'Manager', 'Dispatcher', 'Field Technician', 'Operations Lead'];
+const DEPARTMENTS = ['Logistics', 'Operations', 'Fleet', 'Support'];
+
+function classifyRisk(charges: string[]): 'low' | 'medium' | 'high' | 'critical' {
+    const joined = charges.join(' ').toLowerCase();
+    if (/murder|kidnap|rape|aggravated|firearm|weapon|arson/.test(joined)) return 'critical';
+    if (/assault|battery|burglary|robbery|felony|trafficking/.test(joined)) return 'high';
+    if (/dui|theft|possession|fraud|drug/.test(joined)) return 'medium';
+    return 'low';
+}
+
+function classifyStatus(risk: 'low' | 'medium' | 'high' | 'critical'): 'active' | 'inactive' | 'suspended' | 'terminated' {
+    if (risk === 'critical') return 'suspended';
+    return 'active';
+}
+
+const mockEmployees: Employee[] = REAL_MUGSHOT_ENTRIES.slice(0, 40).map((r, i) => {
+    const risk = classifyRisk(r.allCharges);
+    const status = classifyStatus(risk);
+    const role = ROLES[i % ROLES.length];
+    const department = DEPARTMENTS[i % DEPARTMENTS.length];
+    const alerts = risk === 'critical' ? 3 + (i % 4) : risk === 'high' ? 1 + (i % 3) : risk === 'medium' ? i % 2 : 0;
+    const incidents = risk === 'critical' ? 1 + (i % 3) : risk === 'high' ? (i % 2) : 0;
+    // Stagger last_check across the past week so the feed looks active
+    const hoursAgo = (i * 3) % 168;
+    const lastCheck = new Date(Date.now() - hoursAgo * 3600 * 1000).toISOString();
+    // Preserve mugshotUrl on the employee record so rows can show a portrait
+    return {
+        id: r.personId,
+        name: r.displayName,
+        role,
+        department,
+        location: `${r.countyDisplayName.replace(' County', '')}, ${r.stateCode}`,
+        status,
+        risk_level: risk,
+        last_check: lastCheck,
+        active_alerts: alerts,
+        active_incidents: incidents,
+        created_at: new Date(Date.now() - (90 + (i * 7)) * 86400 * 1000).toISOString(),
+        updated_at: lastCheck,
+        // extra prop used by the view only; Employee type is lenient
+        mugshotUrl: r.mugshotUrl,
+    } as Employee & { mugshotUrl: string };
+});
 
 // =============================================================================
 // COMPONENT CONFIGURATION
@@ -185,9 +223,20 @@ const Employees: React.FC = () => {
                                     }}
                                 >
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span style={{ color: 'var(--accent)' }}>
-                                            <PersonIcon size={20} />
-                                        </span>
+                                        {(employee as Employee & { mugshotUrl?: string }).mugshotUrl ? (
+                                            <img
+                                                src={(employee as Employee & { mugshotUrl?: string }).mugshotUrl}
+                                                alt=""
+                                                referrerPolicy="no-referrer"
+                                                loading="lazy"
+                                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                                style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', background: 'var(--bg-elevated)', flexShrink: 0 }}
+                                            />
+                                        ) : (
+                                            <span style={{ color: 'var(--accent)' }}>
+                                                <PersonIcon size={20} />
+                                            </span>
+                                        )}
                                         <div>
                                             <div style={{
                                                 fontFamily: 'var(--font-body, inherit)',

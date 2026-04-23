@@ -1,19 +1,28 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { PageHeader, Card, CardHeader, CardBody, Badge, Button, EmptyState } from '../../components/ui';
+import { REAL_MUGSHOT_ENTRIES } from '../../lib/demo/realMugshots';
 
-// Mock data
+// Seeded from real records. Picks the 10 highest-charge-count people to fill
+// the "High Priority Persons" watchlist with realistic detail.
+const topRisk = [...REAL_MUGSHOT_ENTRIES]
+    .sort((a, b) => b.allCharges.length - a.allCharges.length)
+    .slice(0, 12);
+
 const mockWatchlistData = {
     id: '1',
     name: 'High Priority Persons',
     description: 'Key individuals requiring immediate notification on any arrest activity.',
     created_at: '2025-11-15T10:00:00Z',
-    entities: [
-        { id: 'e1', type: 'person' as const, display_name: 'John Michael Smith', added_at: '2025-11-15T10:05:00Z', alert_count: 3 },
-        { id: 'e2', type: 'person' as const, display_name: 'Jane Anne Doe', added_at: '2025-11-16T14:30:00Z', alert_count: 2 },
-        { id: 'e3', type: 'person' as const, display_name: 'Robert James Wilson', added_at: '2025-11-20T09:00:00Z', alert_count: 0 },
-        { id: 'e4', type: 'vehicle' as const, display_name: 'FL ABC-1234', added_at: '2025-12-01T11:00:00Z', alert_count: 2 },
-    ],
+    entities: topRisk.map((r, i) => ({
+        id: r.personId,
+        type: 'person' as const,
+        display_name: r.displayName,
+        added_at: new Date(Date.now() - (60 - i * 3) * 86400 * 1000).toISOString(),
+        alert_count: Math.min(r.allCharges.length, 5),
+        mugshotUrl: r.mugshotUrl,
+        subtitle: `${r.countyDisplayName}, ${r.stateCode}`,
+    })),
 };
 
 const typeIcons: Record<string, string> = {
@@ -86,7 +95,7 @@ const WatchlistDetail: React.FC = () => {
                 <Card padding="md">
                     <CardBody>
                         <div style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-primary)' }}>
-                            {watchlist.entities.filter((e) => e.type === 'vehicle').length}
+                            {watchlist.entities.filter((e) => (e.type as string) === 'vehicle').length}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Vehicles</div>
                     </CardBody>
@@ -123,13 +132,24 @@ const WatchlistDetail: React.FC = () => {
                                     onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--sidebar-item-hover)')}
                                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                                 >
-                                    <span style={{ fontSize: '1.25rem' }}>{typeIcons[entity.type]}</span>
+                                    {entity.mugshotUrl ? (
+                                        <img
+                                            src={entity.mugshotUrl}
+                                            alt=""
+                                            referrerPolicy="no-referrer"
+                                            loading="lazy"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                            style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', background: 'var(--bg-elevated)', flexShrink: 0 }}
+                                        />
+                                    ) : (
+                                        <span style={{ fontSize: '1.25rem' }}>{typeIcons[entity.type]}</span>
+                                    )}
                                     <div style={{ flex: 1 }}>
                                         <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
                                             {entity.display_name}
                                         </div>
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                            Added {new Date(entity.added_at).toLocaleDateString('en-GB')}
+                                            {entity.subtitle ? `${entity.subtitle} • ` : ''}Added {new Date(entity.added_at).toLocaleDateString('en-GB')}
                                         </div>
                                     </div>
                                     {entity.alert_count > 0 && (
