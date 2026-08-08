@@ -16,6 +16,7 @@ import { supabase } from '../lib/supabase';
 import EmulationBanner from '../components/portfolio/EmulationBanner';
 import PersonaSwitcher from '../components/portfolio/PersonaSwitcher';
 import AccessModelNote from '../components/portfolio/AccessModelNote';
+import ExploreAccessPanel from '../components/portfolio/ExploreAccessPanel';
 import { EMULATION_COPY } from '../lib/localBackend';
 
 // ============ BOOK MEETING BUTTON COMPONENT ============
@@ -545,52 +546,42 @@ const DeckHubContent: React.FC = () => {
                 <RadarNode size="1200px" type="radar" />
             </div>
 
-            {/* Content */}
-            <div style={{ position: 'relative', zIndex: 2, padding: '4rem 2rem' }}>
-                {/* Portfolio notice + identity bar, pinned above the content */}
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100 }}>
-                    <EmulationBanner variant="hub" />
-                    <div className="deck-hub-navbar" style={{
-                        position: 'relative',
-                        padding: '0.75rem 1rem',
-                        background: 'rgba(0,0,0,0.9)',
-                        backdropFilter: 'blur(10px)',
-                        borderBottom: '1px solid var(--color-grid)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        flexWrap: 'wrap'
-                    }}>
-                        <Link to="/" className="text-mono" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                            ← ARRESTDELTA
-                        </Link>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                            {isAuthenticated ? (
-                                <>
-                                    {/* Review mode toggle — emulated super admin only */}
-                                    <SuperAdminReviewToggle />
-                                    <span className="deck-hub-email text-mono" style={{ fontSize: '0.65rem', color: '#4CAF50', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        ● {user?.email}
-                                    </span>
-                                    <span className="text-mono text-muted" style={{ fontSize: '0.65rem', whiteSpace: 'nowrap' }}>
-                                        {unlockedCount}/{visibleCount}
-                                    </span>
-                                    {/* Replaces LOGOUT: with no auth to end, switching
-                                        identity is the meaningful control here. */}
-                                    <PersonaSwitcher />
-                                </>
-                            ) : (
-                                <span className="text-mono text-muted" style={{ fontSize: '0.65rem' }}>
-                                    LOADING...
-                                </span>
-                            )}
-                        </div>
-                    </div>
+            {/* Identity bar. Deliberately one slim row that never wraps into a
+                block — the long emulation notice sits in the page flow below,
+                where it can scroll away instead of holding a fifth of a phone
+                screen for the whole session. */}
+            <div className="pf-topbar">
+                <div className="pf-topbar__left">
+                    <Link to="/" className="pf-topbar__home">
+                        ←&nbsp;<span className="pf-topbar__home-label">ARRESTDELTA</span>
+                    </Link>
                 </div>
+                <div className="pf-topbar__right">
+                    {isAuthenticated ? (
+                        <>
+                            {/* Review mode toggle — emulated super admin only */}
+                            <SuperAdminReviewToggle />
+                            <span className="pf-topbar__identity">● {user?.email}</span>
+                            <span className="pf-topbar__count">{unlockedCount}/{visibleCount}</span>
+                            <Link to="/admin/provision" className="pf-topbar__admin">
+                                ADMIN
+                            </Link>
+                            {/* Replaces LOGOUT: with no auth to end, switching
+                                identity is the meaningful control here. */}
+                            <PersonaSwitcher />
+                        </>
+                    ) : (
+                        <span className="pf-topbar__count">LOADING...</span>
+                    )}
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="pf-hub__content">
+                <EmulationBanner variant="hub" />
 
                 {/* Hero Section */}
-                <header style={{ textAlign: 'center', marginBottom: '3.5rem', maxWidth: '900px', marginInline: 'auto', paddingTop: '5.5rem' }}>
+                <header className="pf-hub__hero">
                     <div className="animate-fade-in-up" style={{ marginBottom: '1.5rem' }}>
                         <span className="text-mono text-muted" style={{
                             fontSize: '0.75rem',
@@ -619,21 +610,15 @@ const DeckHubContent: React.FC = () => {
                     </div>
 
                     {/* Stats Row */}
-                    <div className="animate-fade-in-up" style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        gap: '3rem',
-                        marginTop: '3rem',
-                        animationDelay: '0.3s',
-                    }}>
+                    <div className="pf-hub__stats animate-fade-in-up" style={{ animationDelay: '0.3s' }}>
                         {[
                             { label: 'TOTAL DECKS', value: visibleCount },
                             { label: 'UNLOCKED', value: isAuthenticated ? unlockedCount : '-' },
                             { label: 'ENFORCEMENT', value: 'NONE' },
                         ].map((stat, i) => (
-                            <div key={i} style={{ textAlign: 'center' }}>
-                                <div className="text-mono text-red" style={{ fontSize: '2rem', fontWeight: 700 }}>{stat.value}</div>
-                                <div className="text-mono text-muted" style={{ fontSize: '0.7rem', letterSpacing: '0.1em' }}>{stat.label}</div>
+                            <div key={i} className="pf-hub__stat">
+                                <div className="pf-hub__stat-value">{stat.value}</div>
+                                <div className="pf-hub__stat-label">{stat.label}</div>
                             </div>
                         ))}
                     </div>
@@ -651,6 +636,10 @@ const DeckHubContent: React.FC = () => {
                         {EMULATION_COPY.hub}
                     </div>
                 </header>
+
+                {/* The discovery surface for the permission model. The header
+                    switcher is easy to walk past; this is not. */}
+                <ExploreAccessPanel unlockedCount={unlockedCount} totalCount={visibleCount} />
 
                 <AccessModelNote />
 
@@ -691,11 +680,7 @@ const DeckHubContent: React.FC = () => {
                         )}
 
                         {/* Deck Grid */}
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
-                            gap: '1.5rem'
-                        }}>
+                        <div className="pf-hub__grid">
                             {decks.map((deck, i) => (
                                 <DeckCard
                                     key={deck.id}

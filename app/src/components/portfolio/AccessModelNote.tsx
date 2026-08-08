@@ -1,9 +1,14 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 /**
  * The portfolio note that explains what this data room was, how its access
  * control actually worked, and precisely which parts of that are now theatre.
  * Collapsed by default so it frames the page without burying it.
+ *
+ * The comparison renders as a table on desktop and as stacked cards below
+ * ~820px. A three-column table of prose is unreadable on a phone however well
+ * it scrolls, so both markups exist and CSS picks one.
  */
 
 interface RowSpec {
@@ -49,63 +54,20 @@ const AccessModelNote: React.FC = () => {
     const [open, setOpen] = useState(false);
 
     return (
-        <section
-            style={{
-                maxWidth: '1400px',
-                marginInline: 'auto',
-                marginBottom: '4rem',
-                border: '1px solid var(--glass-border)',
-                background: 'var(--glass-surface)',
-                backdropFilter: 'blur(10px)',
-            }}
-        >
-            <button
-                onClick={() => setOpen(v => !v)}
-                aria-expanded={open}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '1rem',
-                    width: '100%',
-                    padding: '1.25rem 1.5rem',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                }}
-            >
-                <span style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
-                    <span
-                        className="text-mono"
-                        style={{
-                            fontSize: '0.6rem',
-                            padding: '0.2rem 0.5rem',
-                            border: '1px solid var(--color-alert-red)',
-                            color: 'var(--color-alert-red)',
-                            letterSpacing: '0.12em',
-                        }}
-                    >
-                        PORTFOLIO NOTE
-                    </span>
-                    <span
-                        className="text-mono"
-                        style={{ fontSize: '0.85rem', color: 'var(--color-signal-white)', letterSpacing: '0.06em' }}
-                    >
+        <section className="pf-note">
+            <button onClick={() => setOpen(v => !v)} aria-expanded={open} className="pf-note__toggle">
+                <span className="pf-note__toggle-label">
+                    <span className="pf-note__badge">PORTFOLIO NOTE</span>
+                    <span className="pf-note__heading">
                         How the access control worked — and what it does now
                     </span>
                 </span>
-                <span className="text-mono" style={{ color: 'var(--color-alert-red)', fontSize: '0.8rem' }}>
-                    {open ? '−' : '+'}
-                </span>
+                <span className="pf-note__sign" aria-hidden>{open ? '−' : '+'}</span>
             </button>
 
             {open && (
-                <div style={{ padding: '0 1.5rem 1.75rem', borderTop: '1px solid var(--color-grid)' }}>
-                    <p
-                        className="text-muted"
-                        style={{ fontSize: '0.9rem', lineHeight: 1.7, margin: '1.25rem 0', maxWidth: '68ch' }}
-                    >
+                <div className="pf-note__body">
+                    <p className="pf-note__para">
                         ArrestDelta ran a staged data room. Investors signed in once, landed here, and
                         saw the core thesis immediately; partner-specific material stayed locked until
                         a conversation justified opening it. Requesting a locked deck raised a
@@ -113,107 +75,60 @@ const AccessModelNote: React.FC = () => {
                         unlocked on the requester's next visit. Read receipts closed the loop, so it
                         was clear what had actually been looked at before a follow-up call.
                     </p>
-                    <p
-                        className="text-muted"
-                        style={{ fontSize: '0.9rem', lineHeight: 1.7, marginBottom: '1.75rem', maxWidth: '68ch' }}
-                    >
+                    <p className="pf-note__para">
                         The raise is over, the site is retired and the Supabase project has been
                         deleted. Every deck here is open. The permission machinery is still wired up
                         and still worth clicking through — but it now runs entirely in your browser,
                         which means it demonstrates the workflow rather than enforcing it.
                     </p>
 
-                    <div style={{ overflowX: 'auto' }}>
-                        <table
-                            style={{
-                                width: '100%',
-                                minWidth: '640px',
-                                borderCollapse: 'collapse',
-                                fontFamily: 'var(--font-mono)',
-                                fontSize: '0.75rem',
-                            }}
-                        >
+                    {/* Wide screens: side-by-side comparison. */}
+                    <div className="pf-note__scroll">
+                        <table className="pf-note__table">
                             <thead>
                                 <tr>
-                                    {['', 'Live product', 'This build'].map(head => (
-                                        <th
-                                            key={head}
-                                            style={{
-                                                textAlign: 'left',
-                                                padding: '0.6rem 0.75rem',
-                                                borderBottom: '1px solid var(--color-grid)',
-                                                color: '#777',
-                                                letterSpacing: '0.1em',
-                                                fontWeight: 400,
-                                                fontSize: '0.65rem',
-                                                textTransform: 'uppercase',
-                                                width: head === '' ? '18%' : '41%',
-                                            }}
-                                        >
-                                            {head}
-                                        </th>
-                                    ))}
+                                    <th scope="col"></th>
+                                    <th scope="col">Live product</th>
+                                    <th scope="col">This build</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {COMPARISON.map(row => (
                                     <tr key={row.label}>
-                                        <td
-                                            style={{
-                                                padding: '0.75rem',
-                                                borderBottom: '1px solid rgba(51,51,51,0.5)',
-                                                color: 'var(--color-signal-white)',
-                                                verticalAlign: 'top',
-                                                lineHeight: 1.6,
-                                            }}
-                                        >
-                                            {row.label}
-                                        </td>
-                                        <td
-                                            style={{
-                                                padding: '0.75rem',
-                                                borderBottom: '1px solid rgba(51,51,51,0.5)',
-                                                color: '#999',
-                                                verticalAlign: 'top',
-                                                lineHeight: 1.6,
-                                            }}
-                                        >
-                                            {row.then}
-                                        </td>
-                                        <td
-                                            style={{
-                                                padding: '0.75rem',
-                                                borderBottom: '1px solid rgba(51,51,51,0.5)',
-                                                color: '#c98b95',
-                                                verticalAlign: 'top',
-                                                lineHeight: 1.6,
-                                            }}
-                                        >
-                                            {row.now}
-                                        </td>
+                                        <td>{row.label}</td>
+                                        <td>{row.then}</td>
+                                        <td>{row.now}</td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
 
-                    <p
-                        className="text-mono"
-                        style={{
-                            fontSize: '0.7rem',
-                            color: '#666',
-                            marginTop: '1.5rem',
-                            lineHeight: 1.7,
-                            letterSpacing: '0.04em',
-                        }}
-                    >
+                    {/* Narrow screens: the same content, stacked. */}
+                    <div className="pf-note__stack">
+                        {COMPARISON.map(row => (
+                            <div key={row.label} className="pf-note__stack-item">
+                                <span className="pf-note__stack-label">{row.label}</span>
+                                <p className="pf-note__stack-row">
+                                    <span className="pf-note__stack-key">Live product</span>
+                                    <span className="pf-note__stack-then">{row.then}</span>
+                                </p>
+                                <p className="pf-note__stack-row">
+                                    <span className="pf-note__stack-key">This build</span>
+                                    <span className="pf-note__stack-now">{row.now}</span>
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+
+                    <p className="pf-note__footer">
                         Try it: switch to <strong style={{ color: '#999' }}>Restricted Investor</strong> to
                         see the locked cards and request a deck, then open{' '}
-                        <a href="/admin/provision" style={{ color: 'var(--color-alert-red)' }}>
-                            /admin/provision
-                        </a>{' '}
-                        to grant it. State lives in <code>localStorage</code>; "reset demo data" in the
-                        identity menu puts it back.
+                        <Link to="/admin/provision" style={{ color: 'var(--color-alert-red)' }}>
+                            the provisioning console
+                        </Link>{' '}
+                        to grant it. State lives in <code>localStorage</code>; "reset demo data" puts
+                        it back.
                     </p>
                 </div>
             )}

@@ -26,6 +26,8 @@ export interface Persona {
     id: string;
     email: string;
     name: string;
+    /** One word, for the header switcher where the full name will not fit. */
+    shortName: string;
     role: 'super_admin' | 'viewer';
     /** Short line shown in the identity switcher. */
     blurb: string;
@@ -36,6 +38,7 @@ export const PERSONAS: Persona[] = [
         id: VISITOR_USER_ID,
         email: 'visitor@portfolio.local',
         name: 'Portfolio Visitor',
+        shortName: 'VISITOR',
         role: 'viewer',
         blurb: 'Full access to every deck. The default for this portfolio build.',
     },
@@ -43,6 +46,7 @@ export const PERSONAS: Persona[] = [
         id: RESTRICTED_USER_ID,
         email: 'restricted@portfolio.local',
         name: 'Restricted Investor',
+        shortName: 'RESTRICTED',
         role: 'viewer',
         blurb: 'Core materials only — see the locked cards and request-access flow.',
     },
@@ -50,6 +54,7 @@ export const PERSONAS: Persona[] = [
         id: ADMIN_USER_ID,
         email: 'admin@portfolio.local',
         name: 'Emulated Admin',
+        shortName: 'ADMIN',
         role: 'super_admin',
         blurb: 'Provisioning console, review mode and the notification queue.',
     },

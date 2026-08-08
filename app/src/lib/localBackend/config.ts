@@ -39,13 +39,19 @@ export const BANNER_DISMISS_KEY = `arrestdelta.portfolio.banner.v${LOCAL_DB_VERS
  */
 export const EMULATED_LATENCY_MS = 140;
 
-/** Copy reused across the banners and notices so the framing stays consistent. */
+/**
+ * Copy reused across the banners and notices so the framing stays consistent.
+ * Each banner has a short variant for narrow screens, where the full sentence
+ * wraps to five lines and swallows the page.
+ */
 export const EMULATION_COPY = {
     short: 'Security is emulated. No server, no auth, no real access control.',
     banner:
         'Portfolio rebuild — the live backend is gone. Access control below is emulated in your browser and enforces nothing.',
+    bannerShort: 'Portfolio rebuild. Access control is emulated and enforces nothing.',
     adminBanner:
         'UNAUTHENTICATED — EMULATED ADMIN. This console is open to anyone. It emulates the original super-admin experience; it does not authenticate you and grants no real privilege.',
+    adminBannerShort: 'Unauthenticated. This console is open to anyone and grants no real privilege.',
     hub:
         'Everything in this data room is unlocked. Locks, grants and access requests still work as an interactive demonstration of the original permission model, but they run against browser storage and protect nothing.',
 } as const;

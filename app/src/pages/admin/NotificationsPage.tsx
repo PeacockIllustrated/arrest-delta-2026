@@ -511,6 +511,7 @@ const NotificationsPage: React.FC = () => {
                         No notifications found
                     </div>
                 ) : (
+                    <div className="pf-table-scroll">
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid #333' }}>
@@ -539,6 +540,7 @@ const NotificationsPage: React.FC = () => {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 )}
             </div>
         </div>

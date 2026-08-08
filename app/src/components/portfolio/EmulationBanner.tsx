@@ -2,26 +2,22 @@ import React, { useState } from 'react';
 import { BANNER_DISMISS_KEY, EMULATION_COPY } from '../../lib/localBackend';
 
 /**
- * A persistent notice that the access control on the page underneath is
- * emulated. It sits above the content rather than floating over it, so it
- * cannot be mistaken for a cookie toast and dismissed on reflex.
+ * A notice that the access control on the page underneath is emulated. It sits
+ * in the document flow rather than floating over it, so it cannot be mistaken
+ * for a cookie toast — and, on a phone, so it cannot eat a fifth of the
+ * viewport for the whole session.
+ *
+ * Both copy variants are rendered and swapped in CSS rather than measured in
+ * JS: no resize listener, no flash of the wrong one on first paint.
  */
 
 type Variant = 'hub' | 'admin';
 
-interface EmulationBannerProps {
-    variant?: Variant;
-    /** Fixed to the viewport (hub) or inline in the document flow (admin). */
-    position?: 'fixed' | 'inline';
-    /** Extra offset from the top, for pages with their own fixed navbar. */
-    topOffset?: number;
-}
-
-const EmulationBanner: React.FC<EmulationBannerProps> = ({
-    variant = 'hub',
-    position = 'inline',
-    topOffset = 0,
-}) => {
+/**
+ * `hub` renders as a bordered card inset in the page content; `admin` renders
+ * full-bleed across the top of the console's main column.
+ */
+const EmulationBanner: React.FC<{ variant?: Variant }> = ({ variant = 'hub' }) => {
     const storageKey = `${BANNER_DISMISS_KEY}.${variant}`;
     const [dismissed, setDismissed] = useState(() => {
         try {
@@ -45,63 +41,23 @@ const EmulationBanner: React.FC<EmulationBannerProps> = ({
     const isAdmin = variant === 'admin';
 
     return (
-        <div
-            role="status"
-            style={{
-                position: position === 'fixed' ? 'fixed' : 'relative',
-                top: position === 'fixed' ? topOffset : undefined,
-                left: position === 'fixed' ? 0 : undefined,
-                right: position === 'fixed' ? 0 : undefined,
-                zIndex: 200,
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '0.85rem',
-                padding: '0.7rem 1rem',
-                background: isAdmin ? 'rgba(228, 0, 40, 0.12)' : 'rgba(228, 0, 40, 0.08)',
-                borderBottom: '1px solid rgba(228, 0, 40, 0.45)',
-                backdropFilter: 'blur(10px)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: '0.7rem',
-                lineHeight: 1.6,
-                letterSpacing: '0.03em',
-                color: '#f0c8ce',
-            }}
-        >
-            <span
-                aria-hidden
-                style={{
-                    flexShrink: 0,
-                    padding: '0.15rem 0.45rem',
-                    border: '1px solid var(--color-alert-red)',
-                    color: 'var(--color-alert-red)',
-                    fontWeight: 700,
-                    fontSize: '0.6rem',
-                    letterSpacing: '0.12em',
-                }}
-            >
+        <div role="status" className={`pf-banner ${isAdmin ? 'pf-banner--admin' : 'pf-banner--inset'}`}>
+            <span aria-hidden className="pf-banner__tag">
                 {isAdmin ? 'NO AUTH' : 'DEMO'}
             </span>
 
-            <span style={{ flex: 1, minWidth: 0 }}>
-                {isAdmin ? EMULATION_COPY.adminBanner : EMULATION_COPY.banner}
+            <span className="pf-banner__text">
+                <span className="pf-banner__long">
+                    {isAdmin ? EMULATION_COPY.adminBanner : EMULATION_COPY.banner}
+                </span>
+                <span className="pf-banner__short">
+                    {isAdmin ? EMULATION_COPY.adminBannerShort : EMULATION_COPY.bannerShort}
+                </span>
             </span>
 
-            <button
-                onClick={dismiss}
-                aria-label="Dismiss notice"
-                style={{
-                    flexShrink: 0,
-                    background: 'transparent',
-                    border: '1px solid rgba(228, 0, 40, 0.4)',
-                    color: '#c98b95',
-                    padding: '0.2rem 0.5rem',
-                    fontFamily: 'inherit',
-                    fontSize: '0.6rem',
-                    cursor: 'pointer',
-                    letterSpacing: '0.1em',
-                }}
-            >
-                DISMISS
+            <button onClick={dismiss} aria-label="Dismiss notice" className="pf-banner__dismiss">
+                <span className="pf-banner__long">DISMISS</span>
+                <span className="pf-banner__short" aria-hidden>✕</span>
             </button>
         </div>
     );

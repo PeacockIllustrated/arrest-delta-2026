@@ -453,7 +453,7 @@ const ProvisionPage: React.FC = () => {
                 ]}
             />
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <div className="pf-admin-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                 {/* Form Section */}
                 <div style={{
                     border: '1px solid #333',

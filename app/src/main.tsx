@@ -4,6 +4,8 @@ import './styles/brand.css'
 import './styles/portal.css'
 import './styles/landing.css'
 import './styles/mobile.css'
+// Loaded last so the portfolio/data-room responsive layer wins.
+import './styles/portfolio.css'
 import App from './App.tsx'
 
 createRoot(document.getElementById('root')!).render(
