@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import RadarNode from '../components/investor/ui/RadarNode';
 import { ChartIcon, LockIcon } from '../components/portal/Icons';
 import { DeckHubAuthProvider, useDeckHubAuth } from '../components/deckhub/DeckHubAuthContext';
-import { DECKS, type Deck } from '../lib/decks';
+import { type Deck } from '../lib/decks';
 import { getDecksGroupedBySection } from '../lib/dataRoomPlan';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { DeckReadStatusProvider, useDeckReadStatus } from '../hooks/useDeckReadStatus';
@@ -13,6 +13,10 @@ import LeadershipBiosSection from '../components/data-room/LeadershipBiosSection
 import AdminReviewPanel from '../components/data-room/AdminReviewPanel';
 import { SuperAdminReviewProvider, useSuperAdminReview } from '../hooks/useSuperAdminReview';
 import { supabase } from '../lib/supabase';
+import EmulationBanner from '../components/portfolio/EmulationBanner';
+import PersonaSwitcher from '../components/portfolio/PersonaSwitcher';
+import AccessModelNote from '../components/portfolio/AccessModelNote';
+import { EMULATION_COPY } from '../lib/localBackend';
 
 // ============ BOOK MEETING BUTTON COMPONENT ============
 const BookMeetingButton: React.FC = () => {
@@ -56,7 +60,7 @@ const BookMeetingButton: React.FC = () => {
                     fontSize: '0.9rem'
                 }}
             >
-                ✓ REQUEST SENT. WE WILL BE IN TOUCH.
+                ✓ LOGGED TO THE EMULATED ADMIN QUEUE — NOTHING WAS SENT
             </button>
         );
     }
@@ -441,18 +445,24 @@ const DeckCard: React.FC<{
 // ============ DECK HUB CONTENT ============
 const DeckHubContent: React.FC = () => {
     usePageTitle('Data Room');
-    const { isAuthenticated, user, accessibleDecks, loading, logout } = useDeckHubAuth();
+    const { isAuthenticated, user, accessibleDecks, loading } = useDeckHubAuth();
     const { hasPendingRequest, requestAccess } = useDeckAccessRequests();
     const [requestingDeckId, setRequestingDeckId] = useState<string | null>(null);
 
     // Get decks organized by section from config
     const sectionedDecks = getDecksGroupedBySection();
-    const unlockedCount = accessibleDecks.length;
 
     const isDeckLocked = (deckId: string): boolean => {
         if (!isAuthenticated) return true;
         return !accessibleDecks.includes(deckId);
     };
+
+    // Count what is actually on the page. The registry carries entries the data
+    // room plan does not place in a section (the one-pager is the site home),
+    // so `DECKS.length` overstates the number of cards a visitor can see.
+    const visibleDecks = Array.from(sectionedDecks.values()).flat();
+    const visibleCount = visibleDecks.length;
+    const unlockedCount = visibleDecks.filter(deck => !isDeckLocked(deck.id)).length;
 
     const handleRequestAccess = async (deckId: string) => {
         setRequestingDeckId(deckId);
@@ -537,63 +547,50 @@ const DeckHubContent: React.FC = () => {
 
             {/* Content */}
             <div style={{ position: 'relative', zIndex: 2, padding: '4rem 2rem' }}>
-                {/* Auth Status Bar */}
-                <div className="deck-hub-navbar" style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    padding: '0.75rem 1rem',
-                    background: 'rgba(0,0,0,0.9)',
-                    backdropFilter: 'blur(10px)',
-                    borderBottom: '1px solid var(--color-grid)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    zIndex: 100,
-                    flexWrap: 'wrap'
-                }}>
-                    <Link to="/" className="text-mono" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                        ← ARRESTDELTA
-                    </Link>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                        {isAuthenticated ? (
-                            <>
-                                {/* Super Admin Review Mode Toggle - ONLY visible to super_admin */}
-                                <SuperAdminReviewToggle />
-                                <span className="deck-hub-email text-mono" style={{ fontSize: '0.65rem', color: '#4CAF50', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    ● {user?.email}
+                {/* Portfolio notice + identity bar, pinned above the content */}
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100 }}>
+                    <EmulationBanner variant="hub" />
+                    <div className="deck-hub-navbar" style={{
+                        position: 'relative',
+                        padding: '0.75rem 1rem',
+                        background: 'rgba(0,0,0,0.9)',
+                        backdropFilter: 'blur(10px)',
+                        borderBottom: '1px solid var(--color-grid)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        flexWrap: 'wrap'
+                    }}>
+                        <Link to="/" className="text-mono" style={{ color: '#888', textDecoration: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                            ← ARRESTDELTA
+                        </Link>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                            {isAuthenticated ? (
+                                <>
+                                    {/* Review mode toggle — emulated super admin only */}
+                                    <SuperAdminReviewToggle />
+                                    <span className="deck-hub-email text-mono" style={{ fontSize: '0.65rem', color: '#4CAF50', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        ● {user?.email}
+                                    </span>
+                                    <span className="text-mono text-muted" style={{ fontSize: '0.65rem', whiteSpace: 'nowrap' }}>
+                                        {unlockedCount}/{visibleCount}
+                                    </span>
+                                    {/* Replaces LOGOUT: with no auth to end, switching
+                                        identity is the meaningful control here. */}
+                                    <PersonaSwitcher />
+                                </>
+                            ) : (
+                                <span className="text-mono text-muted" style={{ fontSize: '0.65rem' }}>
+                                    LOADING...
                                 </span>
-                                <span className="text-mono text-muted" style={{ fontSize: '0.65rem', whiteSpace: 'nowrap' }}>
-                                    {unlockedCount}/{DECKS.length}
-                                </span>
-                                <button
-                                    onClick={logout}
-                                    style={{
-                                        background: 'transparent',
-                                        border: '1px solid #333',
-                                        color: '#666',
-                                        padding: '0.4rem 0.75rem',
-                                        fontFamily: 'var(--font-mono)',
-                                        fontSize: '0.6rem',
-                                        cursor: 'pointer',
-                                        whiteSpace: 'nowrap'
-                                    }}
-                                >
-                                    LOGOUT
-                                </button>
-                            </>
-                        ) : (
-                            <span className="text-mono text-muted" style={{ fontSize: '0.65rem' }}>
-                                LOADING...
-                            </span>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
 
                 {/* Hero Section */}
-                <header style={{ textAlign: 'center', marginBottom: '5rem', maxWidth: '900px', marginInline: 'auto', paddingTop: '4rem' }}>
+                <header style={{ textAlign: 'center', marginBottom: '3.5rem', maxWidth: '900px', marginInline: 'auto', paddingTop: '5.5rem' }}>
                     <div className="animate-fade-in-up" style={{ marginBottom: '1.5rem' }}>
                         <span className="text-mono text-muted" style={{
                             fontSize: '0.75rem',
@@ -602,7 +599,7 @@ const DeckHubContent: React.FC = () => {
                             border: '1px solid var(--color-grid)',
                             display: 'inline-block',
                         }}>
-                            ARRESTDELTA // SECURE MATERIALS
+                            ARRESTDELTA // ARCHIVED DATA ROOM
                         </span>
                     </div>
 
@@ -618,7 +615,7 @@ const DeckHubContent: React.FC = () => {
                     </h1>
 
                     <div className="text-muted animate-fade-in-up" style={{ fontSize: '1.1rem', animationDelay: '0.2s' }}>
-                        <TypingText text="Investor materials organized for efficient diligence. Access granted per user." delay={50} />
+                        <TypingText text="Investor materials organised for efficient diligence. Every deck is open." delay={50} />
                     </div>
 
                     {/* Stats Row */}
@@ -630,9 +627,9 @@ const DeckHubContent: React.FC = () => {
                         animationDelay: '0.3s',
                     }}>
                         {[
-                            { label: 'TOTAL DECKS', value: DECKS.length },
+                            { label: 'TOTAL DECKS', value: visibleCount },
                             { label: 'UNLOCKED', value: isAuthenticated ? unlockedCount : '-' },
-                            { label: 'STATUS', value: isAuthenticated ? 'ACTIVE' : 'GUEST' },
+                            { label: 'ENFORCEMENT', value: 'NONE' },
                         ].map((stat, i) => (
                             <div key={i} style={{ textAlign: 'center' }}>
                                 <div className="text-mono text-red" style={{ fontSize: '2rem', fontWeight: 700 }}>{stat.value}</div>
@@ -646,11 +643,16 @@ const DeckHubContent: React.FC = () => {
                         fontSize: '0.8rem',
                         color: '#666',
                         fontFamily: 'var(--font-mono)',
-                        animationDelay: '0.4s'
+                        animationDelay: '0.4s',
+                        maxWidth: '640px',
+                        marginInline: 'auto',
+                        lineHeight: 1.7,
                     }}>
-                        Additional materials are unlocked as conversations progress
+                        {EMULATION_COPY.hub}
                     </div>
                 </header>
+
+                <AccessModelNote />
 
                 {/* Data Room Sections */}
                 {Array.from(sectionedDecks.entries()).map(([section, decks], sectionIndex) => (
@@ -746,8 +748,14 @@ const DeckHubContent: React.FC = () => {
                     <h3 className="text-huge" style={{ fontSize: '2rem', marginBottom: '1rem' }}>
                         READY TO <span className="text-red">ENGAGE?</span>
                     </h3>
-                    <p className="text-muted" style={{ maxWidth: '600px', marginInline: 'auto', marginBottom: '2rem' }}>
+                    <p className="text-muted" style={{ maxWidth: '600px', marginInline: 'auto', marginBottom: '0.75rem' }}>
                         Schedule a direct briefing with our leadership team to discuss the opportunity.
+                    </p>
+                    <p className="text-mono" style={{ maxWidth: '600px', marginInline: 'auto', marginBottom: '2rem', fontSize: '0.7rem', color: '#777', lineHeight: 1.7 }}>
+                        Preserved from the live data room. The button still fires the original
+                        <code style={{ color: '#999' }}> request_meeting </code>
+                        call — now against the local emulation, where it lands in the admin
+                        notification queue. No email, no calendar, no network request.
                     </p>
 
                     <BookMeetingButton />

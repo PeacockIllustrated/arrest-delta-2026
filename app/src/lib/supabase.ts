@@ -1,13 +1,30 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createLocalBackendClient } from './localBackend';
+import { PORTFOLIO_MODE } from './localBackend/config';
 
-// Load Supabase configuration from environment variables
+/**
+ * BACKEND ENTRY POINT
+ * ===================
+ *
+ * ArrestDelta's Supabase project has been deleted. In portfolio mode — the
+ * default, and the only mode that works without it — every call that used to
+ * cross the network is served by `lib/localBackend`, an in-browser emulation
+ * of the tables, functions, auth and change streams the app depended on.
+ *
+ * The real client is kept below, unchanged, because it documents what the
+ * application actually talked to. Restore a project, set `VITE_APP_MODE=live`
+ * plus the two Supabase variables, and this file will hand back the genuine
+ * client with no other change to the codebase.
+ *
+ * Consumers are typed against `SupabaseClient` so no call site needed
+ * rewriting; the single cast below is where that fiction is declared. The
+ * emulation implements only the subset of the client this app uses.
+ */
+
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const portalMode = import.meta.env.VITE_PORTAL_MODE || 'demo';
 
-// In demo mode (default), we don't require real Supabase credentials — the app
-// runs entirely off the in-memory simulator. We still export a client so imports
-// don't break; it just points at a placeholder and is never actually hit.
 const hasRealCreds = Boolean(
     supabaseUrl &&
     supabaseAnonKey &&
@@ -15,46 +32,42 @@ const hasRealCreds = Boolean(
     !supabaseAnonKey.includes('your-anon-key')
 );
 
-if (!hasRealCreds && portalMode === 'live') {
+if (!PORTFOLIO_MODE && !hasRealCreds) {
     throw new Error(
-        'VITE_PORTAL_MODE=live but Supabase credentials are missing or unset. ' +
-        'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in app/.env, or switch to VITE_PORTAL_MODE=demo.'
+        'VITE_APP_MODE=live but Supabase credentials are missing or unset. ' +
+        'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in app/.env, or drop the ' +
+        'VITE_APP_MODE override to run the portfolio build.'
     );
 }
 
-const effectiveUrl = hasRealCreds ? supabaseUrl : 'https://demo.local.invalid';
-const effectiveKey = hasRealCreds ? supabaseAnonKey : 'demo-anon-key-not-used';
+function createBackend(): SupabaseClient {
+    if (PORTFOLIO_MODE) {
+        return createLocalBackendClient() as unknown as SupabaseClient;
+    }
 
-export const supabase: SupabaseClient = createClient(effectiveUrl, effectiveKey, {
-    auth: {
-        persistSession: hasRealCreds,
-        autoRefreshToken: hasRealCreds,
-        detectSessionInUrl: hasRealCreds,
-    },
-});
+    return createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+        },
+    });
+}
 
-export const isSupabaseConfigured = hasRealCreds;
+export const supabase: SupabaseClient = createBackend();
 
-// Connectivity test — only runs when we actually have real creds AND live mode
-if (hasRealCreds && portalMode === 'live') {
-    setTimeout(async () => {
-        console.log('[Supabase] Testing connectivity to:', supabaseUrl);
-        try {
-            const { data: { session } } = await supabase.auth.getSession();
-            console.log('[Supabase] Session:', session ? `Logged in as ${session.user.email}` : 'No session');
+/** True only when a genuine Supabase project is wired up. */
+export const isSupabaseConfigured = !PORTFOLIO_MODE && hasRealCreds;
 
-            const startTime = Date.now();
-            const { error } = await supabase.from('escalations').select('count', { count: 'exact', head: true });
-            const duration = Date.now() - startTime;
-            if (error) {
-                console.error('[Supabase] Connectivity test failed:', error.message);
-            } else {
-                console.log(`[Supabase] Connectivity OK (${duration}ms)`);
-            }
-        } catch (err) {
-            console.error('[Supabase] Connectivity test threw:', err);
-        }
-    }, 500);
+/** True when reads and writes are served by the in-browser emulation. */
+export const isEmulatedBackend = PORTFOLIO_MODE;
+
+if (PORTFOLIO_MODE) {
+    console.info(
+        '%c[ArrestDelta] Portfolio build — backend emulated in-browser. ' +
+        'No network calls, no authentication, no real access control.',
+        'color:#e40028',
+    );
 } else {
-    console.log(`[Supabase] ${hasRealCreds ? 'Credentials present' : 'No credentials'} — portal mode: ${portalMode}. ${portalMode === 'demo' ? 'Using in-memory simulator.' : ''}`);
+    console.log(`[Supabase] Live mode — portal mode: ${portalMode}.`);
 }

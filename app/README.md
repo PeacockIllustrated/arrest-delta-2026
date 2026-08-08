@@ -1,73 +1,68 @@
-# React + TypeScript + Vite
+# ArrestDelta — app
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript + Vite. See [`../PORTFOLIO.md`](../PORTFOLIO.md) for what
+this build is and why the backend is emulated.
 
-Currently, two official plugins are available:
+## Run it
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev        # http://localhost:5173
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Nothing else is required. The Supabase project this app used has been deleted;
+the default build serves every read and write from `src/lib/localBackend`, an
+in-browser emulation. See `.env.example` if you want to point it at a real
+backend instead.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Scripts
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Command | Does |
+| --- | --- |
+| `npm run dev` | Vite dev server |
+| `npm run build` | `tsc -b` then a production build into `dist/` |
+| `npm run preview` | Serve the production build |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest |
+
+## Layout
+
 ```
+src/
+  components/
+    portfolio/     Banners and notices marking the emulated surfaces
+    deckhub/       Data room auth context, read tracking, page wrapper
+    admin/         Internal console shell (open — see PORTFOLIO.md)
+    portal/        Product shell, theme, auth provider
+    investor/      Deck slides, split by pack
+  lib/
+    localBackend/  In-browser stand-in for Supabase — start at config.ts
+    decks.ts       Deck registry
+    dataRoomPlan.ts  Section layout for the hub
+  pages/
+    DeckDashboard.tsx   The data room hub (/decks)
+    investor/           Appendix decks
+    admin/              Provisioning, leads, notifications, tasks
+    portal/             The product
+```
+
+## Two things to know before changing anything
+
+**`lib/supabase.ts` is the only place that decides between the emulation and a
+real client.** Call sites are written against `SupabaseClient` and should stay
+that way — the emulation implements the subset of that interface the app uses,
+and a missing method is meant to fail loudly rather than return an empty result.
+
+**Two route guards are deliberately disarmed** — `components/SiteProtectedRoute.tsx`
+and `components/admin/ProtectedRoute.tsx`. Each file documents the check it used
+to perform. Do not treat either as a template; restore them from git history
+before pointing this at anything real.
+
+## Known pre-existing issues
+
+- `src/test/dataRoomPlan.test.ts` fails: the deck registry carries entries the
+  data room plan does not place in a section (the investor one-pager, which is
+  the site home). The hub counts what it renders, so the page is consistent —
+  the plan and the registry are not.
+- `npm run lint` reports pre-existing errors, mostly `set-state-in-effect` in
+  the portal pages and unused variables.

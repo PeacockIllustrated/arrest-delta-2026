@@ -91,6 +91,24 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose }) =>
 
                 {step === 'form' && (
                     <form onSubmit={handleSubmit} style={{ animation: 'fade-in 0.5s' }}>
+                        {/* This form used to write a lead to Supabase and notify the
+                            team. It now writes to browser storage only — say so
+                            plainly rather than let anyone type a real address into
+                            a box that goes nowhere. */}
+                        <div style={{
+                            border: '1px solid rgba(228, 0, 40, 0.4)',
+                            background: 'rgba(228, 0, 40, 0.08)',
+                            padding: '0.6rem 0.75rem',
+                            marginBottom: '1.25rem',
+                            fontFamily: 'var(--font-mono)',
+                            fontSize: '0.65rem',
+                            lineHeight: 1.7,
+                            color: '#c98b95',
+                        }}>
+                            DEMO FORM — this goes nowhere. Submissions are stored in your
+                            browser so they show up in the emulated admin console. Please
+                            don't enter real contact details.
+                        </div>
                         <div className="input-group">
                             <label className="input-label">IDENTITY</label>
                             <input
@@ -187,9 +205,9 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onClose }) =>
                 {step === 'success' && (
                     <div style={{ textAlign: 'center', padding: '2rem 0', animation: 'fade-in 0.5s' }}>
                         <div style={{ fontSize: '3rem', color: 'var(--color-alert-red)', marginBottom: '1rem' }}>✓</div>
-                        <h3 className="text-mono text-white">TRANSMISSION COMPLETE</h3>
+                        <h3 className="text-mono text-white">SAVED LOCALLY</h3>
                         <p className="text-muted text-mono" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-                            ENCRYPTED PACKET SENT TO HQ.
+                            NOTHING WAS TRANSMITTED. FIND IT IN THE EMULATED ADMIN CONSOLE.
                         </p>
                     </div>
                 )}

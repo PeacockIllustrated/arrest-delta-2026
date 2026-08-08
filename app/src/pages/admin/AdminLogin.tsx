@@ -3,10 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { usePageTitle } from '../../hooks/usePageTitle';
 
+/**
+ * ADMIN LOGIN — PRESERVED EXHIBIT
+ * ===============================
+ *
+ * The sign-in flow is intact and still runs end to end: authenticate, read the
+ * caller's role from `profiles`, refuse anything that is not `super_admin`.
+ * What changed underneath is that all three steps now execute in the browser
+ * against the local emulation, so the password field is decorative and the role
+ * check consults a table the visitor can edit.
+ *
+ * The console itself is reachable without any of this — the route guard is
+ * disarmed (see `components/admin/ProtectedRoute.tsx`). The form is kept, and
+ * the bypass below is made explicit, because pretending the check still means
+ * something would be the dishonest option.
+ */
+
+const DEMO_ADMIN_EMAIL = 'admin@portfolio.local';
+
 const AdminLogin: React.FC = () => {
     usePageTitle('Admin Login');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [email, setEmail] = useState(DEMO_ADMIN_EMAIL);
+    const [password, setPassword] = useState('not-checked');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
@@ -108,8 +126,23 @@ const AdminLogin: React.FC = () => {
                     borderBottom: '1px solid #333',
                     paddingBottom: '1rem'
                 }}>
-                    SYSTEM ACCESS // RESTRICTED
+                    SYSTEM ACCESS // <span style={{ textDecoration: 'line-through', opacity: 0.5 }}>RESTRICTED</span> OPEN
                 </h2>
+
+                <div style={{
+                    border: '1px solid rgba(228, 0, 40, 0.4)',
+                    background: 'rgba(228, 0, 40, 0.08)',
+                    padding: '0.75rem',
+                    marginBottom: '1.5rem',
+                    fontSize: '0.65rem',
+                    lineHeight: 1.7,
+                    color: '#c98b95',
+                    letterSpacing: '0.03em'
+                }}>
+                    EMULATED LOGIN. The password is never checked — there is no server to check it
+                    against. The role lookup that follows still runs, but against browser storage.
+                    The console behind this screen is open to anyone either way.
+                </div>
 
                 <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div>
@@ -180,6 +213,23 @@ const AdminLogin: React.FC = () => {
                         }}
                     >
                         {loading ? 'AUTHENTICATING...' : 'INITIATE SESSION'}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => navigate('/admin/dashboard')}
+                        style={{
+                            background: 'transparent',
+                            color: '#888',
+                            border: '1px dashed #333',
+                            padding: '0.75rem',
+                            fontFamily: 'inherit',
+                            fontSize: '0.7rem',
+                            letterSpacing: '0.08em',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        SKIP — OPEN THE CONSOLE UNAUTHENTICATED
                     </button>
                 </form>
             </div>
