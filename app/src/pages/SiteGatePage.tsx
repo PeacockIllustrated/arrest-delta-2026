@@ -1,7 +1,22 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import '../styles/landing.css';
+
+/**
+ * SITE GATE — PRESERVED EXHIBIT
+ * =============================
+ *
+ * This was the front door. Nothing on the site rendered until Supabase Auth
+ * returned a session from here, and the account it created was the identity the
+ * data room's per-deck grants were attached to.
+ *
+ * Nothing routes here any more — the guard that redirected anonymous visitors
+ * has been removed (see `components/SiteProtectedRoute.tsx`). The screen is kept
+ * because it is the first step of the process this portfolio piece documents,
+ * and it still runs: submitting the form creates a local identity and drops you
+ * into the site. It just no longer decides anything.
+ */
 
 type AuthMode = 'signin' | 'signup';
 
@@ -172,6 +187,21 @@ const SiteGatePage: React.FC = () => {
                     {mode === 'signin' ? 'ACCESS RESTRICTED' : 'CREATE ACCOUNT'}
                 </h2>
 
+                <div style={{
+                    border: '1px solid rgba(228, 0, 40, 0.4)',
+                    background: 'rgba(228, 0, 40, 0.08)',
+                    padding: '0.75rem',
+                    marginBottom: '1.75rem',
+                    fontSize: '0.65rem',
+                    lineHeight: 1.75,
+                    color: '#c98b95',
+                    letterSpacing: '0.03em'
+                }}>
+                    PRESERVED EXHIBIT. This screen used to gate the entire site. Nothing routes
+                    here now and no credentials are checked — the form creates a local identity
+                    and lets you through.
+                </div>
+
                 <form onSubmit={mode === 'signin' ? handleSignIn : handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     {/* Name field - only for signup */}
                     {mode === 'signup' && (
@@ -318,6 +348,16 @@ const SiteGatePage: React.FC = () => {
                                 ? 'NO ACCOUNT? REGISTER →'
                                 : '← ALREADY REGISTERED? SIGN IN'}
                         </button>
+                    </div>
+
+                    <div style={{ textAlign: 'center', borderTop: '1px solid #222', paddingTop: '1rem' }}>
+                        <Link
+                            to="/decks"
+                            className="toggle-link"
+                            style={{ fontFamily: 'inherit', fontSize: '0.7rem' }}
+                        >
+                            SKIP — GO STRAIGHT TO THE DATA ROOM →
+                        </Link>
                     </div>
                 </form>
             </div>

@@ -64,6 +64,9 @@ const LeadTable: React.FC = () => {
                     <button onClick={fetchLeads} style={{ background: 'none', border: 'none', color: '#e40028', cursor: 'pointer', fontSize: '0.8rem' }}>REFRESH</button>
                 </div>
 
+                {/* Record tables are wider than a phone; let this one scroll
+                    inside its panel rather than clip at the screen edge. */}
+                <div className="pf-table-scroll">
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
                     <thead>
                         <tr style={{ borderBottom: '1px solid #333', color: '#666', textAlign: 'left' }}>
@@ -124,6 +127,7 @@ const LeadTable: React.FC = () => {
                         )}
                     </tbody>
                 </table>
+                </div>
                 <style>{`
                     .table-row:hover {
                         background: rgba(228, 0, 40, 0.05);

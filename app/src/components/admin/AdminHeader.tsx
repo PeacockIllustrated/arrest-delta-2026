@@ -85,7 +85,11 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '0.5rem',
-                            fontFamily: "'Space Mono', monospace"
+                            fontFamily: "'Space Mono', monospace",
+                            // This is the way back to the data room on a phone,
+                            // where the sidebar is behind a hamburger.
+                            minHeight: '44px',
+                            whiteSpace: 'nowrap'
                         }}
                     >
                         QUICK LINKS
@@ -107,6 +111,10 @@ const AdminHeader: React.FC<AdminHeaderProps> = ({ onMenuClick }) => {
                             zIndex: 20
                         }}>
                             {[
+                                // The data room is the surface this console
+                                // administers, so it leads — a grant made here
+                                // is only interesting once you go and see it.
+                                { label: 'DATA ROOM', path: '/decks' },
                                 { label: 'LANDING PAGE', path: '/' },
                                 { label: 'INVESTOR PACK', path: '/investor' },
                                 { label: 'BRAND PACK', path: '/brand' }

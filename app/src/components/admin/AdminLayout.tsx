@@ -1,6 +1,7 @@
 import React from 'react';
 import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
+import EmulationBanner from '../portfolio/EmulationBanner';
 
 interface AdminLayoutProps {
     children: React.ReactNode;
@@ -37,6 +38,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </div>
 
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <EmulationBanner variant="admin" />
                 <AdminHeader onMenuClick={() => setSidebarOpen(true)} />
                 <main style={{
                     flex: 1,

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, isEmulatedBackend } from '../../lib/supabase';
 import { DECKS } from '../../lib/decks';
 import { usePageTitle } from '../../hooks/usePageTitle';
+import EmulatedControlNotice from '../../components/portfolio/EmulatedControlNotice';
 
 interface ProvisionedAccess {
     email: string;
@@ -144,6 +145,17 @@ const ProvisionPage: React.FC = () => {
     };
 
     const fetchCurrentUserRole = async () => {
+        // In the portfolio build this console *is* the super-admin exhibit, and
+        // the route guard in front of it has been disarmed — so whoever opened
+        // it sees the full surface regardless of which persona is active on the
+        // data room. The original lookup is kept below because it is what the
+        // page actually did: resolve the session, read `profiles.role`, and hide
+        // the privileged controls from anyone who was not a super admin.
+        if (isEmulatedBackend) {
+            setCurrentUserRole('super_admin');
+            return;
+        }
+
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
             const { data } = await supabase
@@ -423,7 +435,25 @@ const ProvisionPage: React.FC = () => {
                 Grant or revoke deck access for registered users. Users must sign up at the site gate first.
             </p>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+            <EmulatedControlNotice
+                enforcedBy={
+                    'a super-admin-only console, with every grant and revoke executed by a SECURITY DEFINER ' +
+                    'function that re-checked the caller\'s role inside Postgres before touching user_deck_access.'
+                }
+                nowDoes={
+                    'the same operations against browser storage. Grants really do lock and unlock cards in the ' +
+                    'data room — switch to the Restricted Investor persona to watch it happen — but nothing is ' +
+                    'authorised, nothing is persisted beyond this browser, and no other visitor is affected.'
+                }
+                functions={[
+                    'grant_deck_access_by_email',
+                    'revoke_deck_access_by_email',
+                    'get_user_deck_access',
+                    'check_user_exists',
+                ]}
+            />
+
+            <div className="pf-admin-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                 {/* Form Section */}
                 <div style={{
                     border: '1px solid #333',
@@ -1019,6 +1049,13 @@ const ProvisionPage: React.FC = () => {
                         }}>
                             SUPER ADMIN CONTROLS
                         </h3>
+                        <p style={{ fontSize: '0.7rem', color: '#c98b95', lineHeight: 1.75, marginBottom: '1.25rem' }}>
+                            Role escalation. On the live product this was the most closely held control in the
+                            system — <code>set_super_admin</code> ran as a definer function that only an existing
+                            super admin could call, because it handed over the keys to the entire console. Here it
+                            rewrites a row in browser storage, and this panel is visible to anyone who opened the
+                            page.
+                        </p>
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                             <div style={{ flex: 1, minWidth: '250px' }}>
                                 <label style={{ display: 'block', fontSize: '0.75rem', color: '#e40028', marginBottom: '0.5rem' }}>
